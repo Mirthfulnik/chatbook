@@ -1,9 +1,9 @@
-<!doctype html>
+   <!doctype html>
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ChatBook v1.0</title>
+<title>Книги-переписки</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 /* ============ НАСТРОЙКИ АНАЛИТИКИ ============
@@ -79,6 +79,7 @@ body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(
 button,input,select,textarea{font:inherit;color:inherit}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .app{height:100%;max-width:760px;margin:0 auto;position:relative;overflow:hidden}
+body{overflow-x:hidden}
 .view{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg)}
 .view[hidden]{display:none}
 .iconbtn{flex:none;width:40px;height:40px;border-radius:50%;border:0;background:none;display:grid;place-items:center;cursor:pointer;color:var(--accent)}
@@ -212,7 +213,8 @@ footer.rf{padding:10px 12px 12px;background:var(--panel);border-top:1px solid va
 .sbody textarea,.sbody input[type=text],.sbody input[type=search],.sbody select{width:100%;font-size:16px;line-height:1.4;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--paper)}
 .sbody textarea{min-height:110px;resize:vertical}
 .sbody label{display:block;font-size:13.5px;color:var(--muted);margin:10px 0 6px}
-.srow{display:flex;gap:8px}
+.srow{display:flex;gap:8px;min-width:0}
+.srow > *{min-width:0}
 .srow > *:first-child{flex:1}
 .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
 .btn{padding:10px 16px;border-radius:10px;border:1px solid var(--line);background:var(--paper);cursor:pointer}
@@ -302,18 +304,23 @@ footer.rf{padding:10px 12px 12px;background:var(--panel);border-top:1px solid va
 .pw-err{color:var(--danger);font-size:14px;margin:8px 0 0}
 .pw-foot{font-size:12.5px;color:var(--muted);line-height:1.45;margin:14px 0 0}
 /* ---------- админ-панель ---------- */
-.ascroll{flex:1;overflow-y:auto;padding:12px 12px 40px}
-.acard{background:var(--panel);border-radius:14px;padding:14px;margin-bottom:12px}
+.ascroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 12px 40px}
+.acard{background:var(--panel);border-radius:14px;padding:14px;margin-bottom:12px;min-width:0}
 .acard h3{margin:0 0 10px;font-size:15px;color:var(--accent)}
-.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
-.agrid div{background:var(--paper);border-radius:10px;padding:10px}
+.agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.agrid div{background:var(--paper);border-radius:10px;padding:10px;min-width:0}
+.agrid b{overflow-wrap:anywhere}
 .agrid b{display:block;font-size:20px}
 .agrid span{font-size:12.5px;color:var(--muted)}
-.aform{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
-.aform label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.aform{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.aform label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0;line-height:1.3}
 .aform label.wide{grid-column:1/-1}
-.aform input{font-size:16px;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
-.arow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.aform input{width:100%;min-width:0;font-size:16px;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.aform .srow{width:100%}
+.aform .srow button{flex:none;white-space:nowrap}
+.arow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px;min-width:0}
+.arow .t b,.arow .t span{overflow-wrap:anywhere}
+.arow button{flex:none;white-space:nowrap}
 .arow:first-of-type{border-top:0}
 .arow .t{flex:1;min-width:0}
 .arow .t b{font-family:ui-monospace,Menlo,monospace;font-size:14px}
@@ -1779,12 +1786,13 @@ function gameSetup(){
 // ================= Подписка и пейволл =================
 const API = (CFG.apiBase||"").replace(/\/+$/,"");
 const BILLING_ON = !!API && inTG;
-let bill=null, billCache=null, trial={first:null, limit:0, read:0, over:false};
+let bill=null, billErr=null, billCache=null, trial={first:null, limit:0, read:0, over:false};
 const PW_ERR = {
   invalid_code:"Такого промокода нет или он отключён.", expired:"Срок действия промокода истёк.",
   used_up:"Лимит активаций этого промокода исчерпан.", already_used:"Вы уже активировали этот промокод.",
   intro_unavailable:"Цена первого месяца больше недоступна.", already_subscribed:"Подписка уже оформлена.",
-  unauthorized:"Не удалось подтвердить вход через Telegram. Закройте и откройте приложение заново.",
+  unauthorized:"Сервер не принял вход через Telegram. Чаще всего это значит, что на сервере задан неверный или обрезанный токен бота (BOT_TOKEN). Если вы держите приложение открытым дольше двух суток, помогает закрыть и открыть его заново.",
+  server_error:"Ошибка на сервере. Посмотрите журнал командой wrangler tail.",
   network:"Нет связи с сервером. Проверьте интернет и попробуйте ещё раз."
 };
 async function api(path, body={}){
@@ -1798,9 +1806,9 @@ async function api(path, body={}){
 async function refreshBilling(markPaywall){
   if(!BILLING_ON) return null;
   try{
-    bill=await api("/api/me",{markPaywall:!!markPaywall});
+    bill=await api("/api/me",{markPaywall:!!markPaywall}); billErr=null;
     billCache={ent_until:bill.ent_until, at:Date.now()}; putJSON("bill",billCache);
-  }catch(_){}
+  }catch(e){ billErr=e.code||"network"; track("billing_error",{error:billErr}); }
   renderBilling();
   return bill;
 }
@@ -1858,7 +1866,8 @@ async function showPaywall(source){
   const st=await refreshBilling(true);
   const b=sh.body; b.innerHTML="";
   if(!st){
-    b.append(h("p",{class:"pw-lead"},PW_ERR.network),
+    b.append(h("p",{class:"pw-lead"},PW_ERR[billErr]||PW_ERR.network),
+      h("p",{class:"pw-foot"},"Код ошибки: "+(billErr||"network")+". Адрес сервера: "+(API||"не задан")+"."),
       h("div",{class:"btns"},h("button",{class:"btn primary",type:"button",onclick:()=>{ sh.close(); showPaywall(source); }},"Повторить")));
     return;
   }
