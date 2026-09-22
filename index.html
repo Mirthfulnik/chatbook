@@ -1,4 +1,4 @@
-    <!doctype html>
+  <!doctype html>
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="utf-8">
@@ -320,7 +320,9 @@ footer.rf{padding:10px 12px 12px;background:var(--panel);border-top:1px solid va
 .aform input{width:100%;min-width:0;font-size:16px;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
 .aform .srow{width:100%;flex-direction:column;gap:8px}
 .aform .srow button{width:100%;white-space:nowrap}
-.aform input[type=date]{min-height:42px}
+.aform input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;max-width:100%;min-width:0;min-height:44px;text-align:left}
+.aform input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
+.aform input[type=date]::-webkit-calendar-picker-indicator{margin-left:auto}
 .acard .btns{flex-direction:column-reverse;align-items:stretch}
 .acard .btns .btn{width:100%;margin:0}
 .arow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px;min-width:0}
