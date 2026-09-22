@@ -15,8 +15,7 @@
                  Не меняйте её после запуска, иначе все пользователи посчитаются новыми.
    debug       — true, чтобы видеть отправляемые события в консоли браузера */
 window.APP_CONFIG = {
-  /* Адрес сервера подписок (Cloudflare Worker), например "https://chatbooks-api.ИМЯ.workers.dev".
-     Пока пусто, приложение бесплатное: пейволла нет. */
+  apiBase: "https://chatbooks-api.chatgptnik.workers.dev/",
   apiBase: "",
   posthogKey: "",
   posthogHost: "https://eu.i.posthog.com",
