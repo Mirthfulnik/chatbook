@@ -54,6 +54,9 @@ window.APP_CONFIG = {
 <script>try{ if(matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.setAttribute("data-theme","dark"); }catch(_){}</script>
 <style>
 :root{
+  /* Отступы безопасной зоны: системные (чёлка, часы) + кнопки Telegram в полноэкранном режиме */
+  --sat:max(env(safe-area-inset-top,0px), calc(var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px)));
+  --sab:max(env(safe-area-inset-bottom,0px), calc(var(--tg-safe-area-inset-bottom,0px) + var(--tg-content-safe-area-inset-bottom,0px)));
   --bg:#DCE2E3; --panel:#F3F5F4; --paper:#FFFFFF; --ink:#1D2326; --muted:#5F6A6D;
   --accent:#4B3160; --accent-ink:#FFFFFF; --line:#C6CFD1; --note:#F1ECD9; --note-ink:#4A3F1C; --shade:rgba(20,24,26,.45);
   --c0:#5B3A8C; --c1:#1F6F5C; --c2:#9E3F27; --c3:#2D5DA8; --c4:#7A6000; --c5:#A33A6B;
@@ -61,7 +64,7 @@ window.APP_CONFIG = {
   --serif:"PT Serif", Georgia, "Times New Roman", serif;
   --sans:"PT Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-top:var(--sat); padding-bottom:var(--sab);
 }
 :root[data-theme="dark"]{
   --bg:#12181B; --panel:#1B2226; --paper:#242D32; --ink:#E4E9EA; --muted:#949FA2;
@@ -70,7 +73,7 @@ window.APP_CONFIG = {
   --danger:#F28B82;
 }
 *,*::before,*::after{box-sizing:inherit}
-html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+html{height:100%;scroll-padding-top:var(--sat)}
 body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-tap-highlight-color:transparent}
 button,input,select,textarea{font:inherit;color:inherit}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -199,7 +202,7 @@ footer.rf{padding:10px 12px 12px;background:var(--panel);border-top:1px solid va
 
 /* ---------- шторки ---------- */
 .shade{position:fixed;inset:0;background:var(--shade);z-index:20;display:flex;align-items:flex-end;justify-content:center}
-.sheet{background:var(--panel);width:100%;max-width:760px;max-height:88%;border-radius:18px 18px 0 0;display:flex;flex-direction:column;animation:up .22s ease-out;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet{background:var(--panel);width:100%;max-width:760px;max-height:88%;border-radius:18px 18px 0 0;display:flex;flex-direction:column;animation:up .22s ease-out;padding-bottom:var(--sab)}
 @keyframes up{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
 .shead{display:flex;align-items:center;gap:8px;padding:12px 8px 6px 18px}
 .shead b{flex:1;font-size:17px}
@@ -225,11 +228,11 @@ footer.rf{padding:10px 12px 12px;background:var(--panel);border-top:1px solid va
 .msgline{margin:12px 0 0;font-size:14.5px;line-height:1.5;color:var(--muted)}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-3px;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14.5px;z-index:40;max-width:90%;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(24px + var(--sab));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14.5px;z-index:40;max-width:90%;text-align:center}
 
 /* ---------- бог-покровитель (виджет) ---------- */
 .lscroll{padding-bottom:120px}
-.pet{position:absolute;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;align-items:flex-end;gap:8px;z-index:4;max-width:calc(100% - 28px)}
+.pet{position:absolute;right:14px;bottom:calc(14px + var(--sab));display:flex;align-items:flex-end;gap:8px;z-index:4;max-width:calc(100% - 28px)}
 .petBubble{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:14px 14px 4px 14px;padding:9px 30px 9px 12px;font-size:14px;line-height:1.4;box-shadow:0 6px 18px rgba(0,0,0,.14);max-width:230px;position:relative;cursor:pointer;text-align:left}
 .petBubble b{display:block;font-size:13px;color:var(--accent);margin-bottom:1px}
 .petBubble .x{position:absolute;right:4px;top:4px;width:24px;height:24px;border:0;background:none;color:var(--muted);cursor:pointer;border-radius:50%;font-size:16px;line-height:1}
@@ -421,6 +424,17 @@ const W = window.Telegram && window.Telegram.WebApp;
 const inTG = !!(W && W.initData);
 const tgAtLeast = v => !!(inTG && W.isVersionAtLeast && W.isVersionAtLeast(v));
 if(inTG){ try{ W.ready(); W.expand(); }catch(_){} }
+// Безопасная зона Telegram (Bot API 8.0+): дублируем значения в CSS-переменные на случай старой версии скрипта
+function applyInsets(){
+  if(!inTG) return;
+  const s=W.safeAreaInset||{}, c=W.contentSafeAreaInset||{}, st=document.documentElement.style;
+  ["top","bottom","left","right"].forEach(k=>{
+    if(typeof s[k]==="number") st.setProperty(`--tg-safe-area-inset-${k}`, s[k]+"px");
+    if(typeof c[k]==="number") st.setProperty(`--tg-content-safe-area-inset-${k}`, c[k]+"px");
+  });
+}
+applyInsets();
+if(inTG) ["safeAreaChanged","contentSafeAreaChanged","fullscreenChanged","viewportChanged"].forEach(ev=>{ try{ W.onEvent(ev, applyInsets); }catch(_){} });
 const cloud = tgAtLeast("6.9") && W.CloudStorage ? W.CloudStorage : null;
 function openLink(url){ if(inTG && W.openLink) W.openLink(url); else window.open(url,"_blank","noopener"); }
 
