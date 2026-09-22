@@ -1,0 +1,1722 @@
+<!doctype html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Книги-переписки</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+/* ============ НАСТРОЙКИ АНАЛИТИКИ ============
+   Пока ключи пустые, аналитика выключена.
+   posthogKey  — Project API key из PostHog (Settings → Project → Project API key), начинается с phc_
+   posthogHost — https://eu.i.posthog.com для европейского региона или https://us.i.posthog.com для американского
+   tgToken, tgAppName — токен и идентификатор из @DataChief_bot (Telegram Analytics)
+   idSalt      — любая длинная случайная строка; из неё и Telegram ID делается обезличенный идентификатор.
+                 Не меняйте её после запуска, иначе все пользователи посчитаются новыми.
+   debug       — true, чтобы видеть отправляемые события в консоли браузера */
+window.APP_CONFIG = {
+  posthogKey: "",
+  posthogHost: "https://eu.i.posthog.com",
+  tgToken: "",
+  tgAppName: "",
+  idSalt: "замените-на-свою-случайную-строку",
+  progressStepPct: 5,
+  debug: false
+};
+</script>
+<script>
+(function(){
+  var C = window.APP_CONFIG;
+  // Telegram Analytics: запуски приложения (нужны для рейтинга в каталоге Telegram Apps)
+  if(C.tgToken && C.tgAppName){
+    var s=document.createElement("script"); s.async=true; s.src="https://tganalytics.xyz/index.js";
+    s.onload=function(){ try{ window.telegramAnalytics.init({token:C.tgToken, appName:C.tgAppName}); }catch(e){} };
+    document.head.appendChild(s);
+  }
+  // PostHog: стандартный загрузчик (события копятся в очереди, пока грузится библиотека)
+  if(C.posthogKey){
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister identify setPersonProperties reset get_distinct_id get_session_id set_config opt_in_capturing opt_out_capturing has_opted_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    window.posthog.init(C.posthogKey,{
+      api_host:C.posthogHost,
+      autocapture:false,            // не собирать клики автоматически: в кнопках-сообщениях лежит текст книги
+      capture_pageview:false, capture_pageleave:false,
+      disable_session_recording:true,
+      persistence:"localStorage",
+      person_profiles:"identified_only"
+    });
+  }
+})();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=PT+Serif:wght@400;700&display=swap" rel="stylesheet">
+<script>try{ if(matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.setAttribute("data-theme","dark"); }catch(_){}</script>
+<style>
+:root{
+  --bg:#DCE2E3; --panel:#F3F5F4; --paper:#FFFFFF; --ink:#1D2326; --muted:#5F6A6D;
+  --accent:#4B3160; --accent-ink:#FFFFFF; --line:#C6CFD1; --note:#F1ECD9; --note-ink:#4A3F1C; --shade:rgba(20,24,26,.45);
+  --c0:#5B3A8C; --c1:#1F6F5C; --c2:#9E3F27; --c3:#2D5DA8; --c4:#7A6000; --c5:#A33A6B;
+  --danger:#B3261E;
+  --serif:"PT Serif", Georgia, "Times New Roman", serif;
+  --sans:"PT Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root[data-theme="dark"]{
+  --bg:#12181B; --panel:#1B2226; --paper:#242D32; --ink:#E4E9EA; --muted:#949FA2;
+  --accent:#8A6AAB; --accent-ink:#FFFFFF; --line:#2E393E; --note:#332E1E; --note-ink:#EADFB8; --shade:rgba(0,0,0,.6);
+  --c0:#B79CE0; --c1:#6CC7AE; --c2:#E58E73; --c3:#8DB2F0; --c4:#D9B84A; --c5:#E48AB4;
+  --danger:#F28B82;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.app{height:100%;max-width:760px;margin:0 auto;position:relative;overflow:hidden}
+.view{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg)}
+.view[hidden]{display:none}
+.iconbtn{flex:none;width:40px;height:40px;border-radius:50%;border:0;background:none;display:grid;place-items:center;cursor:pointer;color:var(--accent)}
+.iconbtn:hover{background:var(--panel)}
+.iconbtn svg{width:22px;height:22px}
+
+/* ---------- библиотека ---------- */
+.lscroll{flex:1;overflow-y:auto;padding:10px 16px 40px}
+.ltop{display:flex;align-items:center;gap:4px}
+.ltop h1{flex:1;margin:4px 0 0;font-family:var(--serif);font-size:30px;line-height:1.15}
+.lsub{margin:2px 0 14px;color:var(--muted);font-size:14px;line-height:1.4}
+.search{position:relative;margin-bottom:12px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--muted);pointer-events:none}
+.search input{width:100%;padding:11px 12px 11px 38px;border-radius:12px;border:1px solid var(--line);background:var(--paper);font-size:16px}
+.fchips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:18px}
+.fchip{flex:none;padding:7px 14px;border-radius:18px;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-size:14.5px}
+.fchip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.lh{margin:0 0 10px;font-size:19px;font-family:var(--serif)}
+.now{display:flex;gap:16px;align-items:center;background:var(--panel);border-radius:16px;padding:14px;margin-bottom:26px}
+.now .cover{width:92px;flex:none;cursor:pointer}
+.now .info{min-width:0;flex:1}
+.now .info b{display:block;font-family:var(--serif);font-size:18px;line-height:1.25}
+.now .info span{display:block;color:var(--muted);font-size:14px;margin-top:2px}
+.bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin:10px 0 4px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.pct{font-size:13px;color:var(--muted)}
+.cta{margin-top:10px;padding:9px 16px;border-radius:10px;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer;font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:22px 16px}
+.tile{min-width:0;position:relative}
+.cover{position:relative;aspect-ratio:2/3;border-radius:3px 8px 8px 3px;padding:12px 10px 10px 16px;display:flex;flex-direction:column;justify-content:space-between;color:#F6F1E7;box-shadow:0 1px 2px rgba(0,0,0,.18),0 6px 16px rgba(0,0,0,.14);overflow:hidden;border:0;width:100%;text-align:left;cursor:pointer}
+.cover::before{content:"";position:absolute;left:6px;top:0;bottom:0;width:1px;background:rgba(255,255,255,.22)}
+.cover .ct{font-family:var(--serif);font-weight:700;font-size:15px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.cover .ca{font-size:11.5px;opacity:.85;line-height:1.25}
+.cover.missing{filter:grayscale(.7);opacity:.7}
+.addcover{aspect-ratio:2/3;width:100%;border-radius:8px;border:2px dashed var(--line);background:none;color:var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:14.5px;padding:10px;text-align:center}
+.addcover b{font-size:34px;line-height:1;font-weight:400}
+.cap{margin-top:8px;display:flex;gap:4px;align-items:flex-start}
+.cap .ttl{min-width:0;flex:1}
+.cap .ttl b{display:block;font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cap .ttl span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+.more{flex:none;width:28px;height:28px;border-radius:50%;border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1}
+.more:hover{background:var(--panel)}
+.legal{margin:26px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
+.emptylib{color:var(--muted);font-size:15px;margin:8px 0 18px}
+
+/* ---------- чтение ---------- */
+header.rh{display:flex;align-items:center;gap:2px;padding:6px 6px;background:var(--panel);border-bottom:1px solid var(--line);position:relative}
+.headbtn{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;padding:4px 6px;border-radius:10px;text-align:left;cursor:pointer}
+.headbtn:hover{background:var(--bg)}
+.avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:var(--serif);font-size:19px;flex:none;color:#F6F1E7}
+.who{min-width:0}
+.who h1{margin:0;font-size:16.5px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{font-size:13px;color:var(--muted);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status.typing{color:var(--accent)}
+.progress{position:absolute;left:0;bottom:-1px;height:2px;background:var(--accent);width:0;transition:width .4s ease}
+.log{flex:1;overflow-y:auto;padding:16px 12px 8px;display:flex;flex-direction:column;gap:6px}
+.divider{align-self:center;margin:14px 0 6px;font-size:12.5px;color:var(--muted);background:var(--panel);padding:3px 10px;border-radius:10px;text-align:center;max-width:90%}
+.sys{align-self:center;margin:8px 0;font-size:13.5px;color:var(--muted);text-align:center;max-width:90%;line-height:1.45}
+.msg{max-width:min(86%,560px);padding:8px 13px 10px;border-radius:16px;overflow-wrap:anywhere;text-align:left}
+.book{align-self:flex-start;background:var(--paper);border:0;border-bottom-left-radius:5px;cursor:pointer;font-family:var(--serif);font-size:17.5px;line-height:1.6;color:var(--ink)}
+.book .name{display:block;font-family:var(--sans);font-size:14px;font-weight:700;line-height:1.3;margin-bottom:2px}
+.book.has-note{box-shadow:inset 3px 0 0 var(--note-ink)}
+.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);font-size:15.5px;line-height:1.4;border-bottom-right-radius:5px;margin-top:8px}
+.unote{align-self:flex-start;max-width:min(80%,520px);margin:0 0 4px 14px;padding:6px 10px;border-radius:10px;background:var(--note);color:var(--note-ink);font-size:14.5px;line-height:1.45;white-space:pre-wrap}
+.dots{align-self:flex-start;background:var(--paper);border-radius:16px;border-bottom-left-radius:5px;padding:12px 14px;display:flex;gap:4px}
+.dots span{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+.in{animation:pop .22s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+footer.rf{padding:10px 12px 12px;background:var(--panel);border-top:1px solid var(--line)}
+#next{width:100%;font-size:16px;padding:13px 14px;border-radius:12px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+#next:disabled{opacity:.45;cursor:default}
+
+/* ---------- профиль книги ---------- */
+.profile{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;visibility:hidden;z-index:5}
+.profile.open{transform:none;visibility:visible}
+.pbar{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--panel);border-bottom:1px solid var(--line)}
+.pbar b{font-size:16px}
+.pscroll{flex:1;overflow-y:auto;padding:0 0 28px}
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:22px 20px 18px;background:var(--panel)}
+.hero .cover{width:96px;margin-bottom:14px;cursor:default}
+.hero h2{margin:0;font-family:var(--serif);font-size:22px;line-height:1.25}
+.hero p{margin:6px 0 0;color:var(--muted);font-size:15px}
+.sec{background:var(--panel);margin-top:10px;padding:14px 16px}
+.sec h3{margin:0 0 10px;font-size:14px;color:var(--accent);font-weight:700}
+.desc{margin:0;font-size:15.5px;line-height:1.55;max-width:65ch}
+.desc + .desc{margin-top:8px}
+.empty{margin:0 0 6px;color:var(--muted);font-size:14.5px;line-height:1.5}
+.row{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;padding:9px 4px;text-align:left;cursor:pointer;border-radius:8px}
+.row:hover{background:var(--bg)}
+.ini{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:var(--paper);flex:none;font-size:15px}
+.row .t{min-width:0;flex:1}
+.row .t b{display:block;font-size:15.5px;line-height:1.3}
+.row .t span{display:block;font-size:13.5px;color:var(--muted);line-height:1.35}
+.row .chev{color:var(--muted);transition:transform .2s}
+.row[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.bio{margin:0 4px 10px 52px;font-size:15px;line-height:1.55;max-width:60ch}
+.bio[hidden]{display:none}
+.bio p{margin:0 0 6px}
+.bio .links{display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font-size:14px;text-decoration:underline;text-underline-offset:2px}
+.linkbtn.danger{color:var(--danger)}
+.src{margin:8px 0 0;font-size:12.5px;color:var(--muted)}
+.toc-title{display:flex;justify-content:space-between;gap:10px;width:100%;background:none;border:0;padding:9px 4px;text-align:left;cursor:pointer;border-radius:8px;font-size:15.5px}
+.toc-title:hover{background:var(--bg)}
+.toc-title small{color:var(--muted);font-size:13px;flex:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 4px 10px}
+.chip{min-width:40px;padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-size:14.5px}
+.chip.read{color:var(--muted)}
+.chip.here{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.nrow{display:block;width:100%;text-align:left;background:none;border:0;border-left:3px solid var(--note-ink);padding:6px 10px;margin:0 0 10px;cursor:pointer}
+.nrow q{display:block;font-family:var(--serif);font-size:14.5px;color:var(--muted);quotes:"«" "»";overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nrow span{display:block;font-size:15px;line-height:1.45;white-space:pre-wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--paper);padding:10px 6px;cursor:pointer;font-size:14.5px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.act{display:block;width:100%;text-align:left;background:none;border:0;padding:11px 4px;color:var(--accent);cursor:pointer;font-size:15.5px;border-radius:8px}
+.act:hover{background:var(--bg)}
+.act.danger{color:var(--danger)}
+
+/* ---------- шторки ---------- */
+.shade{position:fixed;inset:0;background:var(--shade);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--panel);width:100%;max-width:760px;max-height:88%;border-radius:18px 18px 0 0;display:flex;flex-direction:column;animation:up .22s ease-out;padding-bottom:env(safe-area-inset-bottom,0px)}
+@keyframes up{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+.shead{display:flex;align-items:center;gap:8px;padding:12px 8px 6px 18px}
+.shead b{flex:1;font-size:17px}
+.sbody{overflow-y:auto;padding:4px 18px 18px}
+.sbody blockquote{margin:0 0 12px;padding:8px 12px;border-left:3px solid var(--accent);background:var(--paper);font-family:var(--serif);font-size:15px;line-height:1.5;max-height:8.5em;overflow:auto;border-radius:0 8px 8px 0}
+.sbody textarea,.sbody input[type=text],.sbody input[type=search],.sbody select{width:100%;font-size:16px;line-height:1.4;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--paper)}
+.sbody textarea{min-height:110px;resize:vertical}
+.sbody label{display:block;font-size:13.5px;color:var(--muted);margin:10px 0 6px}
+.srow{display:flex;gap:8px}
+.srow > *:first-child{flex:1}
+.btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.btn{padding:10px 16px;border-radius:10px;border:1px solid var(--line);background:var(--paper);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--danger);border-color:transparent;background:none;margin-right:auto}
+.btn:disabled{opacity:.5;cursor:default}
+.res{display:block;width:100%;text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;cursor:pointer}
+.res b{display:block;font-size:15.5px}
+.res span{display:block;font-size:13.5px;color:var(--muted);line-height:1.4;margin-top:2px}
+.check{display:flex;gap:10px;align-items:flex-start;padding:8px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.check input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.check b{display:block;font-size:15px}
+.check span{display:block;font-size:13.5px;color:var(--muted);line-height:1.4}
+.msgline{margin:12px 0 0;font-size:14.5px;line-height:1.5;color:var(--muted)}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-3px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14.5px;z-index:40;max-width:90%;text-align:center}
+
+/* ---------- бог-покровитель (виджет) ---------- */
+.lscroll{padding-bottom:120px}
+.pet{position:absolute;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;align-items:flex-end;gap:8px;z-index:4;max-width:calc(100% - 28px)}
+.petBubble{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:14px 14px 4px 14px;padding:9px 30px 9px 12px;font-size:14px;line-height:1.4;box-shadow:0 6px 18px rgba(0,0,0,.14);max-width:230px;position:relative;cursor:pointer;text-align:left}
+.petBubble b{display:block;font-size:13px;color:var(--accent);margin-bottom:1px}
+.petBubble .x{position:absolute;right:4px;top:4px;width:24px;height:24px;border:0;background:none;color:var(--muted);cursor:pointer;border-radius:50%;font-size:16px;line-height:1}
+.petBubble.warn{border-color:#C9853A}
+.petMedal{position:relative;width:68px;height:68px;border-radius:50%;border:0;padding:0;background:none;cursor:pointer;flex:none;filter:drop-shadow(0 6px 12px rgba(0,0,0,.22))}
+.petMedal svg{width:100%;height:100%;display:block}
+.petMedal.happy{animation:bob 2.4s ease-in-out infinite}
+.petMedal.worried{animation:wiggle 3s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes wiggle{0%,86%,100%{transform:rotate(0)}90%{transform:rotate(-7deg)}95%{transform:rotate(7deg)}}
+
+/* ---------- Олимп ---------- */
+.obar{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--panel);border-bottom:1px solid var(--line)}
+.obar b{flex:1;font-size:16px}
+.oscroll{flex:1;overflow-y:auto;padding:12px 12px 32px}
+.ocard{display:flex;gap:14px;align-items:center;background:var(--panel);border-radius:16px;padding:14px}
+.ocard .med{width:64px;height:64px;flex:none}
+.ocard .info{min-width:0;flex:1}
+.ocard .info b{display:block;font-family:var(--serif);font-size:19px}
+.ocard .info span{display:block;font-size:14px;color:var(--muted);line-height:1.4}
+.ostat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.ostat div{background:var(--panel);border-radius:12px;padding:10px;text-align:center}
+.ostat b{display:block;font-size:18px}
+.ostat span{font-size:12.5px;color:var(--muted)}
+.fight{background:var(--panel);border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:15px;line-height:1.45}
+.fight .bar{margin:8px 0 2px}
+.fight .bar i{background:#9B2C2C}
+.fight.throne .bar i{background:#C99A2E}
+.board{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#DCCFB0}
+.board svg{display:block;width:100%;height:auto}
+.board .gd{cursor:pointer}
+.board .gd:focus-visible circle.hit{stroke:#fff;stroke-width:4}
+.olegend{display:flex;flex-wrap:wrap;gap:12px;margin:10px 2px;font-size:13px;color:var(--muted)}
+.olegend i{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+.chron{background:var(--panel);border-radius:14px;padding:12px 14px;margin-top:12px}
+.chron h3{margin:0 0 8px;font-size:14px;color:var(--accent)}
+.chron p{margin:0;padding:6px 0;border-top:1px solid var(--line);font-size:14.5px;line-height:1.45}
+.chron p:first-of-type{border-top:0}
+.chron small{color:var(--muted);margin-right:6px}
+.godgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.godopt{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:12px;border:1px solid var(--line);background:var(--paper);cursor:pointer;text-align:center}
+.godopt svg{width:48px;height:48px}
+.godopt b{font-size:14px}
+.godopt span{font-size:11.5px;color:var(--muted);line-height:1.25}
+.godopt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+.optrow{display:flex;gap:8px;flex-wrap:wrap}
+.optrow button{flex:1 1 auto;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-size:14.5px}
+.optrow button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.hint{font-size:13.5px;color:var(--muted);line-height:1.45;margin:8px 0 0}
+@media (prefers-reduced-motion: reduce){.petMedal.happy,.petMedal.worried{animation:none}}
+input[type=file]{display:none}
+@media (prefers-reduced-motion: reduce){.in,.sheet{animation:none}.dots span,.spinner{animation:none}.progress,.profile{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Библиотека -->
+  <section class="view" id="libView" aria-label="Библиотека">
+    <div class="lscroll" id="lscroll">
+      <div class="ltop">
+        <h1>Библиотека</h1>
+        <button class="iconbtn themeBtn" aria-label="Сменить тему"></button>
+        <button class="iconbtn" id="addTop" aria-label="Добавить книгу"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <p class="lsub" id="lsub"></p>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="q" placeholder="Название или автор" aria-label="Поиск по библиотеке">
+      </div>
+      <div class="fchips" role="group" aria-label="Фильтр" id="fchips"></div>
+      <div id="nowBox"></div>
+      <h2 class="lh" id="gridHead">Мои книги</h2>
+      <div class="grid" id="grid"></div>
+      <p class="legal">Поддерживаются fb2, epub и txt. Загружая книгу, вы подтверждаете, что у вас есть право пользоваться этим текстом. Приложение только обрабатывает файл и показывает его в виде переписки; сам текст не меняется.</p>
+      <p class="legal" id="privacyNote" hidden>Приложение собирает обезличенную статистику: какие функции используются и как продвигается чтение. Тексты книг, заметки, имя и Telegram ID не передаются.</p>
+    </div>
+    <div class="pet" id="pet"></div>
+  </section>
+
+  <!-- Олимп -->
+  <section class="view" id="olyView" hidden aria-label="Путь на Олимп">
+    <div class="obar">
+      <button class="iconbtn" id="olyBack" aria-label="В библиотеку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <b>Путь на Олимп</b>
+      <button class="iconbtn" id="olySet" aria-label="Настройки игры"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+    <div class="oscroll" id="oscroll"></div>
+  </section>
+
+  <!-- Чтение -->
+  <section class="view" id="readView" hidden aria-label="Чтение">
+    <header class="rh">
+      <button class="iconbtn" id="toLib" aria-label="В библиотеку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <button class="headbtn" id="headbtn" aria-label="Описание книги, герои и оглавление">
+        <div class="avatar" id="avatar" aria-hidden="true"></div>
+        <div class="who"><h1 id="rTitle"></h1><div class="status" id="status"></div></div>
+      </button>
+      <button class="iconbtn themeBtn" aria-label="Сменить тему"></button>
+      <div class="progress" id="progress"></div>
+    </header>
+    <main class="log" id="log" aria-live="polite"></main>
+    <footer class="rf"><button id="next">Дальше</button></footer>
+
+    <section class="profile" id="profile" role="dialog" aria-modal="true" aria-label="О книге">
+      <div class="pbar">
+        <button class="iconbtn" id="back" aria-label="Вернуться к чату"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <b>О книге</b>
+      </div>
+      <div class="pscroll" id="pscroll"></div>
+    </section>
+  </section>
+  <input type="file" id="file" accept=".fb2,.epub,.txt,.xml,application/epub+zip,text/plain">
+</div>
+<script>
+"use strict";
+// ================= Демо-книга: перевод кн. Л. Урусова (1882), общественное достояние =================
+const DEMO = {
+  id:"demo",
+  title:"Размышления",
+  fullTitle:"Размышления императора Марка Аврелия Антонина о том, что важно для самого себя",
+  author:"Марк Аврелий",
+  narrator:"Марк Аврелий",
+  translator:"Перевод кн. Л. Урусова, 1882",
+  lang:"ru",
+  description:[
+    "Личные записи римского императора Марка Аврелия (121–180), которые он вёл для себя, в основном во время военных походов. Публиковать их он не собирался: это разговор с самим собой о том, как жить достойно, спокойно и с пользой для других.",
+    "Первая книга — благодарность. Марк по очереди вспоминает родных и учителей и перечисляет, чему научился у каждого.",
+    "Это пример: здесь только начало первой книги, разделы 1–13."
+  ],
+  heroes:[
+    ["Марк Аврелий","рассказчик","Римский император с 161 по 180 год и философ-стоик. Писал эти заметки по-гречески, для себя. Большую часть правления провёл в войнах на северных границах империи."],
+    ["Верус","дед","Марк Анний Вер, дед Марка по отцу, трижды консул. После ранней смерти сына взял внука к себе и воспитывал его."],
+    ["Отец","родной отец","Марк Анний Вер, претор. Умер, когда Марку было около трёх лет, поэтому сын знал его в основном по памяти и рассказам других."],
+    ["Мать","Домиция Луцилла","Богатая и образованная римлянка. Марк ценил в ней набожность, щедрость и простоту жизни при большом состоянии."],
+    ["Прадед по матери","Луций Катилий Север","Видный сенатор и полководец. Настоял, чтобы мальчик учился дома у лучших наставников, а не в общественных школах."],
+    ["Воспитатель","имя неизвестно","Домашний наставник детских лет. Приучал к труду, скромности и равнодушию к скачкам и гладиаторским боям."],
+    ["Диогнет","первый учитель","Учитель живописи, который первым увлёк Марка философией."],
+    ["Рустикус","Квинт Юний Рустик","Философ-стоик, главный наставник Марка, позже префект Рима и дважды консул. Дал ему записи бесед Эпиктета."],
+    ["Аполлоний","Аполлоний Халкидонский","Философ-стоик, которого Антонин Пий пригласил в Рим учить Марка."],
+    ["Секст","Секст Херонейский","Философ, племянник Плутарха. Марк ходил к нему на занятия, уже став императором."],
+    ["Александр-грамматик","Александр из Котиэя","Знаток Гомера и греческого языка, учитель Марка в детстве."],
+    ["Фронтон","Марк Корнелий Фронтон","Знаменитый оратор, учитель латинского красноречия. Их с Марком переписка частично сохранилась."],
+    ["Александр Платоник","Александр из Селевкии","Ритор и философ-платоник, позднее секретарь императора по греческой переписке."],
+    ["Катулл","Цинна Катул","Философ-стоик из круга наставников Марка."],
+    ["Север","Гней Клавдий Север","Философ-перипатетик и сенатор. Его сын женился на дочери Марка."],
+    ["Максим","Клавдий Максим","Философ-стоик и государственный деятель. Марк ставил его в пример как человека ровного и доброжелательного."],
+    ["Отец (приёмный)","Антонин Пий","Император с 138 по 161 год. Усыновил Марка и готовил его в преемники. Его портрет в разделе 13 — самый подробный в книге."],
+    ["Эпиктет","философ","Философ-стоик, бывший раб. Его учение сильнее всего повлияло на мысли Марка."]
+  ].map(([name,role,bio])=>({name,role,bio})),
+  blocks:[
+["h","Глава I"],["h","1"],
+["p","От деда моего Веруса узнал я, что значит быть благонравным и свободным от гнева. Слава и память, которую оставил по себе родной отец мой, побуждают меня к добросовестности и мужеству. Матери я обязан тем, что сделался богобоязненным и щедрым, – избегаю не только дурных дел, но и злых помышлений, люблю воздержание и не склонен к образу жизни богачей. Прадед мой по матери внушал мне, что в общественных школах не научишься добру, а советовал выбирать себе наставников из самых лучших людей, не жалея на это средств."],
+["h","2"],
+["p","Воспитатель мой убеждал меня не увлекаться чрезмерно зрелищами скачек или бойцов, он научил меня закаливать себя в труде, довольствоваться малым, не обременять других тем, что я не мог бы сделать сам, не предпринимать несколько дел за раз, необходимых – не откладывать и не верить без разбору всякому злословию."],
+["h","3"],
+["p","Диогнет отвращал меня от пустяков, удалял от гаданий, магов, кудесников; не давал мне увлекаться страстью к птицам и птичьим боям; он научил меня переносить смелое слово и развил во мне склонность к философии. Он приучил меня спать на полу, накрываться шкурою зверей и вообще к простоте греческой дисциплины."],
+["h","4"],
+["p","Благодаря Рустикусу я получил охоту к исправлению и улучшению самого себя. Благодаря ему я не соблазнился тщеславием софистов, не писал отвлеченных трактатов и не держал поучительных речей, не щеголял своим образованием; бросил риторику, стихотворство и напыщенность, расстался с халатом и оставил привычки людей изнеженных. Он же приучил меня писать просто, так, как написано письмо его к моей матери из Симуэссы. Он же внушил мне смирять свой гнев и охотно мириться с тем, кто, признав свою ошибку, ищет примирения. Он приучил меня читать толково и внимательно, не довольствуясь поверхностным знанием, а также не доверяться краснобаям, ничего не знающим основательно. Он же ознакомил меня с творениями Эпиктета и подарил мне его сочинения из книг своей библиотеки."],
+["h","5"],
+["p","Аполлоний научил меня, как пользоваться свободой и сохранять спокойствие независимо от случайности; он научил меня ни на что в мире не полагаться, как на решение разума; приучил меня переносить стойко жестокие страдания – потерю ребенка или продолжительный недуг; он показал мне на примере ясно и наглядно, что в одном и том же человеке есть необузданность и кротость. Он не был жестким философом, преподавал философию, не вдаваясь в мелочи, и публично высказывал, что искусство излагать ее на теории ценит весьма низко. По его обращению с друзьями я понял, как следует принимать их услуги, не попадая к ним в зависимость и не заслуживая упрека в неблагодарности."],
+["h","6"],
+["p","От Секста я перенял сдержанность в разговорах. Его дом был образцом патриархального строя жизни, основанного на любви и сообразного с законами природы. Он с виду был важен и глубокомыслен; но эта наружность была непритворная; к друзьям он был внимателен и старался оказывать им услуги, с простаками был снисходителен и мудрости своей не метал перед людьми, погрязшими в предрассудках. Одним словом, он умел расположить к себе всякого; оттого его все уважали и предпочитали его трезвую беседу всякой лести или похвалам. Он умел просто и ясно изложить всякому правила, которыми бы он мог руководствоваться в жизни. В нем никогда не замечалось проявления гнева или волнения; чуждый увлечению страстей, он, однако, умел горячо любить друзей своих. Он составил себе честное имя и не возгордился, обладал многими познаниями и не выставлял их на показ."],
+["h","7"],
+["p","Грамматик Александр поучал меня примером своим; он никогда не делал выговоров или резких замечаний, не насмехался над грубыми ошибками других и не стыдил собеседника, а, напротив, мягко и незаметно исправлял ошибку, щадя самолюбие его: например, он повторял немедленно грубо выраженную мысль в безукоризненной форме, как будто желая подтвердить сказанное своим авторитетом, или придумывал другой ловкий и безобидный прием."],
+["h","8"],
+["p","Фронтон убедил меня, что произвол порождает ненависть, бессовестность и лицемерие и что в так называемых патрициях менее человеческих свойств, чем в других людях."],
+["h","9"],
+["p","Александр Платоник внушал мне никогда без крайней надобности не отвечать на просьбы словесно или письменно – «мне некогда» и не отказываться услужить другу под предлогом множества занятий."],
+["h","10"],
+["p","Катулл внушил мне внимательно и терпеливо относиться к жалобам, даже неразумным, и стараться удовлетворить всякого или смягчить своим участием. Он же наставлял меня разумно любить детей моих."],
+["h","11"],
+["p","Север воодушевил меня любовью к семье, к друзьям и домашним, любовью к правде и справедливости. Он раскрыл мне образец такого общественного порядка, в котором закон совпадал бы со справедливостью и все граждане были бы равны перед законом, и идеал такой монархической власти, которая была бы охраной гражданской свободы. Он советовал мне постоянно прибегать к философским занятиям, быть благотворительным и щедрым, верить в добро и дружбу. Я заметил его искренность в обращении с друзьями. Если он имел против кого неудовольствие, он высказывался ему открыто, так что друзья его всегда знали верно, в каких они отношениях с ним."],
+["h","12"],
+["p","Максим руководствовался правилом, что каждый должен твердо действовать по своим убеждениям и отнюдь не склоняться к образу мыслей других наперекор своему разуму. Он не падал духом в болезнях или других случайностях, правом был умерен, кроток и спокоен; когда требовалось действовать, он приступал к делу бодро и решительно. Все верили, что он говорил всегда то, что думал. Никогда он не делал ничего сердясь или против воли, редко восторгался или удивлялся, не спешил и не опаздывал, не был робок и нерешителен, не поддавался ни крайней радости, ни огорчению, ни гневу, ни подозрительности. Он был всегда кроток, правдив и готов оказать помощь, и все эти свойства не были плодом воспитания или науки, а как бы принадлежали ему от природы. Наконец, никто в его присутствии не чувствовал себя приниженным, но и не мог стать выше его. Он умел шутить… и приятно."],
+["h","13"],
+["p","В отце моем была какая-то кротость и вместе с тем несокрушимая твердость в том, что он окончательно и зрело обдумал. Он был чужд честолюбия и тщеславия, внешность и почести не привлекали его; он работал охотно и неутомимо, выслушивал всякого, кто приходил к нему с общеполезным предложением, и безошибочно знал, где затормозить и где дать ходу. Он не дружился с праздной молодежью и сосредоточивал свои мысли на заботах об общественном благе; приближенных своих не удерживал к столу и не требовал, чтобы они всегда были при нем, когда он выходил. Если кто из них не оказывался в свите его, он не ставил этого в вину и не менялся в обращении своем. В совете он подолгу зрело обсуждал дела, изыскивая целесообразные меры, не торопясь и не хватаясь за первое поданное мнение, чтобы скорее покончить с совещанием. В дружбе он отличался постоянством, не тяготился друзьями, но и не баловал их излишней лаской и милостью."],
+["p","Черты его лица выражали спокойствие ясной души. Он был дальновиден и предусмотрителен, распоряжения его касались мельчайших подробностей, приказания отдавались неторопливо. Он не терпел шумных приветствий лести под какой бы то ни было личиной, одну магистратуру обставлял подобающими ей достоинству, почестями. Он тратил бережливо и соблюдал государственные доходы, не обращая внимания на неодобрение, но и не сердясь на порицателей. Он почитал богов, но без суеверия и никогда не заискивал расположения толпы. Образ мыслей его отличался трезвостью и постоянством, все делалось у него вовремя, нововведения избегались. Всем тем, что для удобства жизни доставлялось для него в изобилии, он пользовался умеренно, не придавая тому особой важности. Когда этого излишка не было, он и не думал о нем."],
+["p","Никто не мог сказать про него, что он был софист, оратор, писатель или ученый, но все знали, что он человек зрелый, просвещенный, недоступный лести, имеющий власть над собой, а потому и над другими. Хотя он высоко ценил лишь истинных философов, однако остальных не бранил."],
+["p","В домашнем кругу разговор его был свободен и приятен. Относительно ухода за своим телом он соблюдал благоразумную середину, не посвящал свою жизнь свою одной плоти, но и не пренебрегал ею, имея в виду, что разумная забота о ней избавляет от докторов и лекарств. В нем была особая высокая черта: он слушал без зависти всякого человека, выдающегося специальным знанием, например по части истории, законов или обычаев, помогал ему и давал ход по его отрасли. Хотя он во всем держался обычая предков, однако не любил, чтобы это замечали и чтоб об этом говорили."],
+["p","Во вкусах своих он был постоянен, любил те же места и те же занятия. После жестоких головных болей, которым он был подвержен, он бодро принимался за обычные занятия. У него не было тайных дел, исключая немногих государственных. Он относился весьма осторожно к вопросам о народных зрелищах, об общественных работах и вообще к благодеяниям и щедротам, расточаемым народу: он рассматривал их с разумной точки зрения пользы народа, а не приобретения для себя славы."],
+["p","Ванны готовились для него лишь в назначенные дни, он не имел страсти к постройкам, никогда не заботился о пище или о том, чтобы прислуга была видная и рослая. Он не обращал внимания на цвет и качество тканей своей одежды: таковая изготовлялась в небольшом поместье Лориуме из шерсти собственных овец или выписывалась из Ланувиума через арендатора его тускуланского поместья."],
+["p","Вообще главные нравственные черты его были: человечность, кротость, самообладание, умеренность, равновесие и стройный порядок во всем, до чего он касался. К нему вполне относилось то, что сказано об Сократе: он имел силу воздерживаться от соблазна там, где другие впадали в него по слабости характера, и умел пользоваться умеренно такими наслаждениями, которые другие увлекались до бесчувствия."],
+["p","Иметь над собою власть воздерживаться и сохранять умеренность в пользовании – вот черты человека с сильным, непобедимым духом, каковым и показал себя на деле отец мой во время болезни Клавдия Максима."]
+  ]
+};
+
+// ================= Telegram =================
+const W = window.Telegram && window.Telegram.WebApp;
+const inTG = !!(W && W.initData);
+const tgAtLeast = v => !!(inTG && W.isVersionAtLeast && W.isVersionAtLeast(v));
+if(inTG){ try{ W.ready(); W.expand(); }catch(_){} }
+const cloud = tgAtLeast("6.9") && W.CloudStorage ? W.CloudStorage : null;
+function openLink(url){ if(inTG && W.openLink) W.openLink(url); else window.open(url,"_blank","noopener"); }
+
+// ================= Хранилище: Telegram CloudStorage или localStorage =================
+const LS = {
+  get(k){ try{ return localStorage.getItem("cb_"+k); }catch(_){ return null; } },
+  set(k,v){ try{ localStorage.setItem("cb_"+k,v); return true; }catch(_){ return false; } },
+  del(k){ try{ localStorage.removeItem("cb_"+k); }catch(_){} }
+};
+const raw = {
+  async getMany(keys){
+    if(!keys.length) return {};
+    if(!cloud) return Object.fromEntries(keys.map(k=>[k,LS.get(k)]));
+    const out={};
+    for(let i=0;i<keys.length;i+=20){
+      const part = keys.slice(i,i+20);
+      const res = await new Promise(r=>{ try{ cloud.getItems(part,(e,v)=>r(e?{}:(v||{}))); }catch(_){ r({}); } });
+      Object.assign(out,res);
+    }
+    return out;
+  },
+  set(k,v){
+    if(!cloud) return Promise.resolve(LS.set(k,v));
+    return new Promise(r=>{ try{ cloud.setItem(k,v,e=>r(!e)); }catch(_){ r(false); } });
+  },
+  del(keys){
+    if(!keys.length) return Promise.resolve();
+    if(!cloud){ keys.forEach(LS.del); return Promise.resolve(); }
+    return new Promise(r=>{ try{ cloud.removeItems(keys,()=>r()); }catch(_){ r(); } });
+  }
+};
+const PART = 3800;
+function splitSafe(s){
+  const parts=[]; let i=0;
+  while(i<s.length){
+    let j=Math.min(s.length,i+PART);
+    if(j<s.length){ const c=s.charCodeAt(j-1); if(c>=0xD800 && c<=0xDBFF) j--; }
+    parts.push(s.slice(i,j)); i=j;
+  }
+  return parts;
+}
+async function putJSON(key,obj){
+  const s=JSON.stringify(obj);
+  if(s.length<=PART) return raw.set(key,s);
+  const parts=splitSafe(s);
+  for(let i=0;i<parts.length;i++) await raw.set(`${key}_${i}`,parts[i]);
+  return raw.set(key,"#"+parts.length);
+}
+async function getJSONMany(keys){
+  const head=await raw.getMany(keys), out={};
+  for(const k of keys){
+    let v=head[k];
+    if(!v){ out[k]=null; continue; }
+    if(v[0]==="#"){
+      const n=+v.slice(1), pk=[...Array(n)].map((_,i)=>`${k}_${i}`);
+      const parts=await raw.getMany(pk); v=pk.map(x=>parts[x]||"").join("");
+    }
+    try{ out[k]=JSON.parse(v); }catch(_){ out[k]=null; }
+  }
+  return out;
+}
+async function delJSON(key){
+  const head=(await raw.getMany([key]))[key];
+  const keys=[key];
+  if(head && head[0]==="#") for(let i=0;i<+head.slice(1);i++) keys.push(`${key}_${i}`);
+  return raw.del(keys);
+}
+
+// Тексты книг: IndexedDB на устройстве (в CloudStorage они не помещаются)
+const memTexts = {};
+const idb = (()=>{
+  let p=null;
+  const open=()=>p||(p=new Promise((res,rej)=>{
+    try{
+      const r=indexedDB.open("chatbooks",1);
+      r.onupgradeneeded=()=>r.result.createObjectStore("texts",{keyPath:"id"});
+      r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+    }catch(e){ rej(e); }
+  }));
+  const tx=(mode,fn)=>open().then(db=>new Promise((res,rej)=>{
+    const t=db.transaction("texts",mode); const req=fn(t.objectStore("texts"));
+    t.oncomplete=()=>res(req && req.result); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error);
+  }));
+  return {
+    get:id=>tx("readonly",s=>s.get(id)).catch(()=>memTexts[id]),
+    put:rec=>{ memTexts[rec.id]=rec; return tx("readwrite",s=>s.put(rec)).catch(()=>{}); },
+    del:id=>{ delete memTexts[id]; return tx("readwrite",s=>s.delete(id)).catch(()=>{}); },
+    keys:()=>tx("readonly",s=>s.getAllKeys()).catch(()=>Object.keys(memTexts))
+  };
+})();
+
+// ================= Разбивка текста на сообщения (текст не меняется) =================
+const MAX_MSG = 280, MSGS_PER_STEP = 2;
+const sentences = p => p.split(/(?<=[.!?…»])\s+(?=[«"(–—\-\p{Lu}0-9])/u).filter(Boolean);
+function toMessages(p){
+  const out=[]; let cur="";
+  for(const s of sentences(p)){
+    if(!cur) cur=s;
+    else if((cur+" "+s).length<=MAX_MSG) cur+=" "+s;
+    else { out.push(cur); cur=s; }
+  }
+  if(cur) out.push(cur);
+  return out;
+}
+function buildSteps(blocks){
+  const steps=[], toc=[]; let heads=[];
+  for(const [t,text] of blocks){
+    if(t==="h"){ heads.push(text); continue; }
+    const msgs=toMessages(text);
+    for(let i=0;i<msgs.length;i+=MSGS_PER_STEP){
+      heads.forEach(h=>toc.push({text:h, step:steps.length}));
+      steps.push({heads, lines:msgs.slice(i,i+MSGS_PER_STEP)});
+      heads=[];
+    }
+  }
+  return {steps, toc};
+}
+
+// ================= Разбор файлов =================
+const clean = s => (s||"").replace(/\u00AD/g,"").replace(/\s*\[\d{1,3}\]/g,"").replace(/\s+/g," ").trim();
+const HEAD_RE = /^((книга|глава|часть|book|chapter|part)\s+\S+.*|[IVXLC]{1,6}\.?|\d{1,3}\.?)$/i;
+function pushPara(blocks, text){
+  text = clean(text); if(!text) return;
+  const m = text.match(/^(\d{1,3})\.\s+(\S.*)$/u);
+  if(m){ blocks.push(["h",m[1]]); blocks.push(["p",m[2]]); return; }
+  if(text.length<60 && HEAD_RE.test(text)){ blocks.push(["h",text.replace(/\.$/,"")]); return; }
+  blocks.push(["p",text]);
+}
+function decode(buf){
+  const head = new TextDecoder("latin1").decode(buf.slice(0,300));
+  const enc = (head.match(/encoding=["']([\w-]+)["']/i)||[])[1];
+  if(enc){ try{ return new TextDecoder(enc.toLowerCase()).decode(buf); }catch(_){} }
+  const u = new TextDecoder("utf-8").decode(buf);
+  return (u.match(/\uFFFD/g)||[]).length > 20 ? new TextDecoder("windows-1251").decode(buf) : u;
+}
+function parseFB2(xmlText){
+  const doc = new DOMParser().parseFromString(xmlText,"application/xml");
+  if(doc.getElementsByTagName("parsererror").length) throw new Error("файл fb2 повреждён");
+  const q = (el,name) => Array.from(el.getElementsByTagName(name));
+  const ti = q(doc,"title-info")[0];
+  let author="", title="", description=[], lang="";
+  if(ti){
+    const a = q(ti,"author")[0];
+    if(a) author = ["first-name","middle-name","last-name"].map(n=>(q(a,n)[0]||{}).textContent||"").filter(Boolean).join(" ").trim();
+    title = clean((q(ti,"book-title")[0]||{}).textContent);
+    lang = clean((q(ti,"lang")[0]||{}).textContent).toLowerCase();
+    const ann = q(ti,"annotation")[0];
+    if(ann) description = q(ann,"p").map(p=>clean(p.textContent)).filter(Boolean);
+  }
+  const body = q(doc,"body").find(b=>!b.getAttribute("name")) || q(doc,"body")[0];
+  if(!body) throw new Error("в файле нет текста книги");
+  q(body,"a").forEach(a=>{ if(a.getAttribute("type")==="note" || /^\[?\d{1,3}\]?$/.test(a.textContent.trim())) a.remove(); });
+  const blocks=[];
+  (function walk(el){
+    for(const c of Array.from(el.children)){
+      const n=c.localName;
+      if(n==="title"||n==="subtitle"){ const t=clean(c.textContent); if(t) blocks.push(["h",t]); }
+      else if(n==="p"||n==="v"||n==="text-author") pushPara(blocks,c.textContent);
+      else if(["section","epigraph","poem","stanza","cite"].includes(n)) walk(c);
+    }
+  })(body);
+  return {author, title, description, lang, blocks};
+}
+function loadJSZip(){
+  if(window.JSZip) return Promise.resolve(window.JSZip);
+  return new Promise((res,rej)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+    s.onload=()=>res(window.JSZip); s.onerror=()=>rej(new Error("не удалось загрузить модуль для epub"));
+    document.head.append(s);
+  });
+}
+async function parseEPUB(buf){
+  const JSZip = await loadJSZip();
+  const zip = await JSZip.loadAsync(buf);
+  const xml = s => new DOMParser().parseFromString(s,"application/xml");
+  const cf = zip.file("META-INF/container.xml"); if(!cf) throw new Error("это не epub");
+  const container = xml(await cf.async("string"));
+  const opfPath = container.getElementsByTagName("rootfile")[0].getAttribute("full-path");
+  const base = opfPath.includes("/") ? opfPath.slice(0,opfPath.lastIndexOf("/")+1) : "";
+  const opf = xml(await zip.file(opfPath).async("string"));
+  const get = n => clean((opf.getElementsByTagNameNS("*",n)[0]||{}).textContent);
+  const manifest = {};
+  for(const it of Array.from(opf.getElementsByTagNameNS("*","item"))) manifest[it.getAttribute("id")] = it.getAttribute("href");
+  const blocks=[];
+  for(const ref of Array.from(opf.getElementsByTagNameNS("*","itemref"))){
+    const href = manifest[ref.getAttribute("idref")]; if(!href) continue;
+    const f = zip.file(decodeURIComponent(base + href.split("#")[0])); if(!f) continue;
+    const html = new DOMParser().parseFromString(await f.async("string"),"text/html");
+    html.querySelectorAll("sup, a").forEach(a=>{ if(/^\[?\d{1,3}\]?$/.test(a.textContent.trim())) a.remove(); });
+    html.querySelectorAll("h1,h2,h3,h4,h5,h6,p").forEach(el=>{
+      if(/^H\d$/.test(el.tagName)){ const t=clean(el.textContent); if(t) blocks.push(["h",t]); }
+      else pushPara(blocks, el.textContent);
+    });
+  }
+  const d = clean(get("description").replace(/<[^>]+>/g," "));
+  return {author:get("creator"), title:get("title"), description:d?[d]:[], lang:get("language").toLowerCase(), blocks};
+}
+function parseTXT(text){
+  const blocks=[];
+  const byBlank = text.split(/\r?\n\s*\r?\n/);
+  for(const part of (byBlank.length > 20 ? byBlank : text.split(/\r?\n/))) pushPara(blocks, part);
+  return {author:"", title:"", description:[], lang:"", blocks};
+}
+function guessLang(blocks){
+  const sample = blocks.filter(b=>b[0]==="p").slice(0,30).map(b=>b[1]).join(" ");
+  const cyr=(sample.match(/[а-яё]/gi)||[]).length, lat=(sample.match(/[a-z]/gi)||[]).length;
+  return cyr>lat ? "ru" : "en";
+}
+function hashId(blocks){
+  const s=JSON.stringify(blocks); let h1=0x811c9dc5, h2=0;
+  for(let i=0;i<s.length;i++){ const c=s.charCodeAt(i); h1=Math.imul(h1^c,16777619)>>>0; h2=(h2*31+c)>>>0; }
+  return "k"+h1.toString(36)+h2.toString(36)+s.length.toString(36);
+}
+async function readBook(file){
+  const buf = await file.arrayBuffer();
+  const name = file.name.toLowerCase();
+  let book;
+  if(name.endsWith(".epub")) book = await parseEPUB(buf);
+  else {
+    const text = decode(buf);
+    book = (name.endsWith(".fb2") || /<FictionBook/i.test(text.slice(0,2000))) ? parseFB2(text) : parseTXT(text);
+  }
+  if(!book.blocks.some(b=>b[0]==="p")) throw new Error("не нашлось текста");
+  book.title = book.title || file.name.replace(/\.[^.]+$/,"");
+  book.author = book.author || "Автор неизвестен";
+  book.lang = (book.lang||guessLang(book.blocks)).slice(0,2);
+  return book;
+}
+
+// ================= Аналитика =================
+const CFG = window.APP_CONFIG || {};
+const ANALYTICS_ON = !!CFG.posthogKey && !!window.posthog;
+async function sha256(s){
+  try{ const b=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)); return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,32); }
+  catch(_){ return null; }
+}
+function track(event, props={}, beacon){
+  if(CFG.debug) console.log("[analytics]", event, props);
+  if(!ANALYTICS_ON) return;
+  try{ window.posthog.capture(event, props, beacon ? {transport:"sendBeacon"} : undefined); }catch(_){}
+}
+(async function identify(){
+  if(!ANALYTICS_ON) return;
+  const u = inTG && W.initDataUnsafe && W.initDataUnsafe.user;
+  const sp = inTG && W.initDataUnsafe && W.initDataUnsafe.start_param || null;
+  try{
+    window.posthog.register({in_telegram:inTG, tg_platform:inTG?W.platform:"web", tg_version:inTG?W.version:null, app_version:"0.5"});
+    if(sp){ window.posthog.register({start_param:sp}); window.posthog.register_once({first_start_param:sp}); }
+    if(u){
+      const id=await sha256((CFG.idSalt||"")+":"+u.id);
+      if(id) window.posthog.identify(id, {language:u.language_code||null, is_premium:!!u.is_premium});
+    }
+  }catch(_){}
+})();
+const DAY=86400000;
+const daysSince = t => t ? Math.round((Date.now()-t)/DAY*10)/10 : null;
+const bookProps = m => ({book_id:m.id, is_demo:m.id==="demo", book_lang:m.lang||null, book_format:m.format||null, total_steps:m.total||null});
+
+// Сессии чтения: от открытия книги до ухода с экрана или 10 минут бездействия
+let rs=null;
+function sessionStart(){ if(cur) rs={book:cur.id, start:Date.now(), last:Date.now(), steps:0, startPct:pctOf(cur)}; }
+function sessionEnd(reason, beacon){
+  if(!rs) return; const s=rs; rs=null;
+  if(!s.steps) return;
+  const m=metas[s.book];
+  track("reading_session_end", {book_id:s.book, steps:s.steps, duration_sec:Math.max(1,Math.round((s.last-s.start)/1000)),
+    start_pct:s.startPct, end_pct:m?pctOf(m):null, reason}, beacon);
+}
+function sessionStep(){
+  const now=Date.now();
+  if(rs && now-rs.last>10*60*1000){ sessionEnd("idle"); sessionStart(); }
+  if(!rs) sessionStart();
+  rs.steps++; rs.last=now;
+}
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState==="hidden"){ sessionEnd("hidden", true); track("app_hidden", {view}, true); }
+  else if(view==="read" && !rs) sessionStart();
+});
+window.addEventListener("pagehide", ()=>sessionEnd("closed", true));
+// ================= Утилиты =================
+const $ = id => document.getElementById(id);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const wait = ms => new Promise(r=>setTimeout(r, reduce ? Math.min(ms,200) : ms));
+function h(tag, attrs={}, ...kids){
+  const e=document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs||{})){
+    if(v===false||v==null) continue;
+    if(k==="class") e.className=v; else if(k==="style") e.style.cssText=v;
+    else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else e.setAttribute(k,v===true?"":v);
+  }
+  for(const k of kids.flat()) if(k!=null && k!==false) e.append(k);
+  return e;
+}
+function hashNum(s){ let x=0; for(const ch of s) x=(x*31+ch.codePointAt(0))>>>0; return x; }
+const colorOf = name => `var(--c${hashNum(name)%6})`;
+const COVERS = ["#3E4A5B","#5A3D5C","#2F5A55","#6B4A2F","#4A5A2F","#6A2F3A","#2F4A6B","#55493A"];
+const coverColor = m => COVERS[hashNum(m.id+m.title)%COVERS.length];
+function toast(text){
+  const t=h("div",{class:"toast",role:"status"},text); document.body.append(t);
+  setTimeout(()=>t.remove(), 2600);
+}
+function cover(m, attrs={}){
+  return h(attrs.tag||"div",{class:"cover"+(attrs.missing?" missing":""),style:`background:${coverColor(m)}`, "aria-hidden":attrs.label?null:"true", "aria-label":attrs.label||null, type:attrs.tag==="button"?"button":null, onclick:attrs.onclick||null},
+    h("span",{class:"ct"},m.title), h("span",{class:"ca"},m.author));
+}
+const SVG_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const SVG_MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+
+// ================= Тема =================
+const darkMQ = matchMedia("(prefers-color-scheme: dark)");
+let themePref = "auto";
+function effDark(){
+  if(themePref==="dark") return true;
+  if(themePref==="light") return false;
+  return inTG ? W.colorScheme==="dark" : darkMQ.matches;
+}
+function applyTheme(t, persist){
+  themePref=t;
+  const dark=effDark();
+  document.documentElement.setAttribute("data-theme", dark?"dark":"light");
+  document.querySelectorAll(".themeBtn").forEach(b=>{ b.innerHTML = dark?SVG_SUN:SVG_MOON; b.setAttribute("aria-label", dark?"Светлая тема":"Тёмная тема"); });
+  document.querySelectorAll("[data-theme-opt]").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.themeOpt===t)));
+  if(tgAtLeast("6.1")){
+    const cs=getComputedStyle(document.documentElement);
+    try{ W.setHeaderColor(cs.getPropertyValue("--panel").trim()); W.setBackgroundColor(cs.getPropertyValue("--bg").trim()); }catch(_){}
+  }
+  if(persist){ putJSON("theme", t); track("theme_changed",{theme:t, effective:dark?"dark":"light"}); }
+}
+document.addEventListener("click", e=>{ if(e.target.closest(".themeBtn")) applyTheme(effDark()?"light":"dark", true); });
+if(darkMQ.addEventListener) darkMQ.addEventListener("change", ()=>applyTheme(themePref));
+if(inTG) try{ W.onEvent("themeChanged", ()=>applyTheme(themePref)); }catch(_){}
+
+// ================= Шторки и навигация «назад» =================
+const sheets=[];
+function sheet(title, build){
+  let closed=false;
+  const body=h("div",{class:"sbody"});
+  const close=()=>{ if(closed) return; closed=true; wrap.remove(); sheets.splice(sheets.indexOf(api),1); syncBack(); };
+  const wrap=h("div",{class:"shade",onclick:e=>{ if(e.target===wrap) close(); }},
+    h("div",{class:"sheet",role:"dialog","aria-modal":"true","aria-label":title},
+      h("div",{class:"shead"}, h("b",{},title),
+        h("button",{class:"iconbtn","aria-label":"Закрыть",onclick:close}, h("span",{style:"font-size:22px;line-height:1"},"×"))),
+      body));
+  const api={close, body};
+  sheets.push(api); document.body.append(wrap); build(body, close); syncBack();
+  const f=body.querySelector("textarea,input:not([type=checkbox]),button"); if(f) setTimeout(()=>f.focus(),30);
+  return api;
+}
+function confirmSheet(title, text, okLabel, onOk){
+  sheet(title,(b,close)=>{
+    b.append(h("p",{class:"desc"},text),
+      h("div",{class:"btns"}, h("button",{class:"btn",type:"button",onclick:close},"Отмена"),
+        h("button",{class:"btn primary",type:"button",onclick:()=>{ close(); onOk(); }},okLabel)));
+  });
+}
+let view="lib", profileOpen=false;
+function goBack(){
+  if(sheets.length) return sheets[sheets.length-1].close();
+  if(profileOpen) return closeProfile();
+  if(view==="read" || view==="oly") return showLibrary();
+}
+function syncBack(){
+  if(!tgAtLeast("6.1")) return;
+  try{ (sheets.length||profileOpen||view!=="lib") ? W.BackButton.show() : W.BackButton.hide(); }catch(_){}
+}
+if(tgAtLeast("6.1")) W.BackButton.onClick(goBack);
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && (sheets.length||profileOpen)) goBack(); });
+
+// ================= Библиотека: состояние =================
+let lib=[], metas={}, have=new Set(), filter="all";
+const saveTimers={};
+function saveMeta(m, now){
+  clearTimeout(saveTimers[m.id]);
+  const go=()=>putJSON("b_"+m.id, m);
+  if(now) return go();
+  saveTimers[m.id]=setTimeout(go, 700);
+}
+const saveLib = () => putJSON("lib", lib);
+function demoMeta(){
+  return {id:"demo", title:DEMO.title, fullTitle:DEMO.fullTitle, author:DEMO.author, narrator:DEMO.narrator,
+    translator:DEMO.translator, lang:DEMO.lang, description:DEMO.description, heroes:DEMO.heroes.slice(),
+    notes:[], pos:0, total:0, added:0, opened:0};
+}
+const pctOf = m => m.total ? Math.min(100, Math.round((m.pos||0)/m.total*100)) : 0;
+function stateOf(m){
+  if(m.total && m.pos>=m.total) return "done";
+  if(m.pos>0) return "reading";
+  return "new";
+}
+
+// ================= Библиотека: экран =================
+const FILTERS=[["all","Все"],["reading","Читаю"],["new","Новые"],["done","Прочитанные"]];
+function renderLibrary(){
+  const u = inTG && W.initDataUnsafe && W.initDataUnsafe.user;
+  $("lsub").textContent = u
+    ? `${u.first_name||"Читатель"}, прогресс, заметки и герои сохраняются в вашем Telegram. Файлы книг хранятся на этом устройстве.`
+    : "Прогресс, заметки и герои сохраняются в этом браузере. Откройте приложение в Telegram, чтобы они были доступны на всех устройствах.";
+
+  const fc=$("fchips"); fc.innerHTML="";
+  FILTERS.forEach(([k,l])=>fc.append(h("button",{class:"fchip",type:"button","aria-pressed":String(filter===k),onclick:()=>{filter=k;renderLibrary();track("library_filter",{filter:k});}},l)));
+
+  const q=$("q").value.trim().toLowerCase();
+  const all=lib.map(id=>metas[id]).filter(Boolean);
+  let list=all.filter(m=>!q || (m.title+" "+m.author).toLowerCase().includes(q));
+  if(filter!=="all") list=list.filter(m=>stateOf(m)===filter);
+  list.sort((a,b)=>(b.opened||b.added||0)-(a.opened||a.added||0));
+
+  const nb=$("nowBox"); nb.innerHTML="";
+  const current = all.filter(m=>stateOf(m)==="reading").sort((a,b)=>(b.opened||0)-(a.opened||0))[0];
+  if(current && !q && filter==="all"){
+    nb.append(h("h2",{class:"lh"},"Сейчас читаю"),
+      h("div",{class:"now"},
+        cover(current,{tag:"button",label:"Продолжить «"+current.title+"»",onclick:()=>openReader(current.id),missing:!have.has(current.id)}),
+        h("div",{class:"info"}, h("b",{},current.title), h("span",{},current.author),
+          h("div",{class:"bar"},h("i",{style:`width:${pctOf(current)}%`})), h("div",{class:"pct"},`Прочитано ${pctOf(current)}%`),
+          h("button",{class:"cta",type:"button",onclick:()=>openReader(current.id)},"Продолжить"))));
+  }
+
+  $("gridHead").textContent = q ? "Найдено" : (filter==="all" ? "Мои книги" : FILTERS.find(f=>f[0]===filter)[1]);
+  const g=$("grid"); g.innerHTML="";
+  if(!q && filter==="all") g.append(h("div",{class:"tile"},
+    h("button",{class:"addcover",type:"button",onclick:pickFile},h("b",{"aria-hidden":"true"},"+"),"Добавить книгу"),
+    h("div",{class:"cap"},h("div",{class:"ttl"},h("span",{},"fb2, epub, txt")))));
+  list.forEach(m=>{
+    const miss=!have.has(m.id), st=stateOf(m);
+    const label = miss ? "Файл на другом устройстве" : st==="done" ? "Прочитано" : st==="reading" ? `${pctOf(m)}%` : "Новая";
+    g.append(h("div",{class:"tile"},
+      cover(m,{tag:"button",label:"Открыть «"+m.title+"»",onclick:()=>openReader(m.id),missing:miss}),
+      h("div",{class:"cap"},
+        h("div",{class:"ttl"},h("b",{},m.title),h("span",{},label)),
+        h("button",{class:"more",type:"button","aria-label":"Действия с книгой «"+m.title+"»",onclick:()=>bookMenu(m)},"⋯"))));
+  });
+  if(!list.length) g.append(h("p",{class:"emptylib",style:"grid-column:1/-1"}, q ? "Ничего не нашлось." : "Здесь пока пусто."));
+}
+let searchTimer=null;
+$("q").addEventListener("input", ()=>{
+  renderLibrary();
+  clearTimeout(searchTimer);
+  const len=$("q").value.trim().length;
+  if(len) searchTimer=setTimeout(()=>track("library_search",{query_length:len, results:$("grid").querySelectorAll(".tile .cover").length, library_size:lib.length}),1500);
+});
+$("addTop").addEventListener("click", pickFile);
+
+function bookMenu(m){
+  sheet(m.title,(b,close)=>{
+    b.append(
+      h("button",{class:"act",type:"button",onclick:()=>{close();openReader(m.id);}},"Открыть"),
+      h("button",{class:"act",type:"button",onclick:()=>{close(); track("book_reset",{...bookProps(m), pct_before:pctOf(m), source:"library"}); m.pos=0; saveMeta(m,true); renderLibrary(); toast("Прогресс сброшен");}},"Отметить как непрочитанную"),
+      h("button",{class:"act danger",type:"button",onclick:()=>{close(); confirmSheet("Удалить книгу?","Книга, прогресс, заметки и найденные герои будут удалены из библиотеки.","Удалить",()=>removeBook(m.id));}},"Удалить из библиотеки"));
+  });
+}
+async function removeBook(id){
+  const m=metas[id]; if(m) track("book_removed",{...bookProps(m), pct:pctOf(m), notes:(m.notes||[]).length, heroes:(m.heroes||[]).length});
+  lib=lib.filter(x=>x!==id); delete metas[id]; have.delete(id);
+  await saveLib(); await delJSON("b_"+id); await idb.del(id);
+  renderLibrary(); toast("Книга удалена");
+}
+function showLibrary(){
+  if(profileOpen) closeProfile();
+  sessionEnd("to_library");
+  view="lib"; $("readView").hidden=true; $("olyView").hidden=true; $("libView").hidden=false; renderLibrary(); renderPet(); syncBack();
+}
+
+// ================= Загрузка файлов =================
+function pickFile(){ $("file").click(); }
+$("file").addEventListener("change", async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  const format=(f.name.match(/\.([a-z0-9]+)$/i)||[,"unknown"])[1].toLowerCase();
+  track("book_upload_started",{format, size_kb:Math.round(f.size/1024)});
+  const wait=sheet("Загрузка",b=>b.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Обрабатываю «"+f.name+"»…")));
+  try{
+    const bk=await readBook(f);
+    const id=hashId(bk.blocks);
+    await idb.put({id, blocks:bk.blocks}); have.add(id);
+    if(!metas[id]){
+      metas[id]={id, title:bk.title, author:bk.author, narrator:bk.author, lang:bk.lang, description:bk.description,
+        format, heroes:[], notes:[], pos:0, total:0, added:Date.now(), opened:0};
+      lib.unshift(id); await saveLib(); await saveMeta(metas[id],true);
+      track("book_added",{book_id:id, book_format:format, book_lang:bk.lang, paragraphs:bk.blocks.length,
+        has_description:!!(bk.description&&bk.description.length), library_size:lib.length});
+    } else {
+      track("book_file_restored",{...bookProps(metas[id]), pct:pctOf(metas[id])});
+    }
+    wait.close(); openReader(id);
+  }catch(err){
+    wait.close();
+    track("book_upload_failed",{format, error:String(err&&err.message||"unknown").slice(0,80)});
+    sheet("Не получилось",b=>b.append(h("p",{class:"desc"},"Не удалось прочитать файл: "+(err&&err.message||"неизвестная ошибка")+". Подойдут fb2, epub или txt.")));
+  }
+});
+// ================= Чтение =================
+const log=$("log"), statusEl=$("status"), progress=$("progress"), btn=$("next");
+let cur=null, steps=[], toc=[], busy=false;
+const narrator = () => cur.narrator || cur.author;
+const noteAt = (s,l) => (cur.notes||[]).find(n=>n.s===s && n.l===l);
+
+function idleStatus(){
+  if(!steps.length) return "";
+  return cur.pos>=steps.length ? "книга дочитана" : `${cur.author}, прочитано ${pctOf(cur)}%`;
+}
+function setStatus(t,typing){ statusEl.textContent=t; statusEl.classList.toggle("typing",!!typing); }
+function refresh(){
+  const done = cur.pos>=steps.length;
+  btn.disabled = busy || done;
+  btn.textContent = done ? "Книга закончилась" : "Дальше";
+  progress.style.width = pctOf(cur) + "%";
+  if(!busy) setStatus(idleStatus());
+}
+const scrollDown = () => { log.scrollTop = log.scrollHeight; };
+const addDivider = (text, anim) => log.append(h("div",{class:"divider"+(anim?" in":"")},text));
+const addSys = text => log.append(h("div",{class:"sys"},text));
+function renderNote(s,l,after){
+  const n=noteAt(s,l); if(!n) return;
+  after.after(h("div",{class:"unote","data-note":`${s}:${l}`}, h("b",{},"Заметка: "), n.text));
+}
+function addLine(s,l,text,showName,anim){
+  const name=narrator();
+  const b=h("button",{class:"msg book"+(anim?" in":"")+(noteAt(s,l)?" has-note":""),"data-s":s,"data-l":l,type:"button",
+      "aria-label":"Сообщение. Нажмите, чтобы добавить заметку", onclick:()=>openNote(s,l)},
+    showName ? h("span",{class:"name",style:`color:${colorOf(name)}`},name) : null,
+    h("span",{class:"txt"},text));
+  log.append(b); renderNote(s,l,b);
+}
+function renderStepInstant(i){
+  steps[i].heads.forEach(t=>addDivider(t,false));
+  steps[i].lines.forEach((line,l)=>addLine(i,l,line,l===0,false));
+}
+function renderChat(){
+  log.innerHTML="";
+  addSys("«"+(cur.fullTitle||cur.title)+"». Нажмите на название вверху, чтобы открыть описание, героев и оглавление. Нажмите на сообщение, чтобы оставить заметку.");
+  if(cur.pos>0){
+    const from=Math.max(0,cur.pos-3);
+    if(from>0) addSys("…вы остановились здесь");
+    for(let i=from;i<cur.pos;i++) renderStepInstant(i);
+  }
+  refresh(); scrollDown();
+}
+async function openReader(id){
+  const m=metas[id]; if(!m) return;
+  const rec = id==="demo" ? {blocks:DEMO.blocks} : await idb.get(id);
+  if(!rec || !rec.blocks){
+    track("book_file_missing",{...bookProps(m), pct:pctOf(m)});
+    sheet("Файла нет на этом устройстве",(b,close)=>b.append(
+      h("p",{class:"desc"},`Прогресс, заметки и герои книги «${m.title}» сохранены, но сам текст хранится на другом устройстве. Загрузите тот же файл, и чтение продолжится с того же места.`),
+      h("div",{class:"btns"},h("button",{class:"btn primary",type:"button",onclick:()=>{close();pickFile();}},"Загрузить файл"))));
+    return;
+  }
+  cur=m; ({steps,toc}=buildSteps(rec.blocks));
+  const prevOpened=cur.opened;
+  cur.total=steps.length; cur.pos=Math.min(cur.pos||0,steps.length); cur.opened=Date.now(); cur.notes=cur.notes||[]; cur.heroes=cur.heroes||[];
+  track("book_opened",{...bookProps(cur), pct:pctOf(cur), state:stateOf(cur), first_open:!prevOpened,
+    days_since_last_open:daysSince(prevOpened), notes:cur.notes.length, heroes:cur.heroes.length});
+  saveMeta(cur);
+  $("rTitle").textContent=cur.title;
+  const av=$("avatar"); av.textContent=(cur.title.trim()[0]||"К").toUpperCase(); av.style.background=coverColor(cur);
+  view="read"; $("libView").hidden=true; $("readView").hidden=false; syncBack();
+  sessionEnd("switch_book"); sessionStart();
+  renderChat();
+}
+async function next(fromJump){
+  if(busy || cur.pos>=steps.length) return;
+  busy=true; refresh();
+  if(cur.pos>0 && !fromJump){ log.append(h("div",{class:"msg me in"},"Дальше")); scrollDown(); }
+  const i=cur.pos, step=steps[i];
+  step.heads.forEach(t=>addDivider(t,true));
+  for(let l=0;l<step.lines.length;l++){
+    const line=step.lines[l];
+    setStatus(`${narrator()} печатает…`,true);
+    const d=h("div",{class:"dots","aria-label":"печатает"},h("span"),h("span"),h("span"));
+    log.append(d); scrollDown();
+    await wait(Math.min(1500, 380 + line.length*6));
+    d.remove(); addLine(i,l,line,l===0,true); scrollDown();
+    await wait(150);
+  }
+  const stepPct=CFG.progressStepPct||5, before=Math.floor(pctOf(cur)/stepPct);
+  if(cur.pos===0 && !cur.started) cur.started=Date.now();
+  cur.pos++; saveMeta(cur); sessionStep();
+  if(G) gain(step.lines.length).forEach((t,k)=>setTimeout(()=>toast(t), k*2700));
+  const after=Math.floor(pctOf(cur)/stepPct);
+  if(after>before) track("reading_progress",{...bookProps(cur), pct:after*stepPct, days_since_start:daysSince(cur.started)});
+  if(cur.pos>=steps.length){
+    addDivider("Конец книги",true);
+    track("book_finished",{...bookProps(cur), days_to_finish:daysSince(cur.started), notes:cur.notes.length, heroes:cur.heroes.length});
+  }
+  busy=false; refresh(); scrollDown();
+  btn.focus({preventScroll:true});
+}
+btn.addEventListener("click", ()=>next(false));
+$("toLib").addEventListener("click", showLibrary);
+
+function jumpTo(stepIndex){
+  if(busy) return;
+  track("toc_jump",{book_id:cur.id, from_pct:pctOf(cur), to_pct:cur.total?Math.round(stepIndex/cur.total*100):0, direction:stepIndex<cur.pos?"back":"forward"});
+  closeProfile();
+  cur.pos=stepIndex; saveMeta(cur);
+  renderChat(); next(true);
+}
+function showAt(stepIndex){
+  if(busy) return;
+  track("note_opened_from_list",{book_id:cur.id});
+  closeProfile();
+  const found = log.querySelector(`[data-s="${stepIndex}"]`);
+  if(found){ found.scrollIntoView({block:"center"}); return; }
+  if(stepIndex < cur.pos){
+    log.innerHTML="";
+    addSys("Фрагмент с заметкой. Нажмите «Дальше», чтобы продолжить с места, где вы остановились.");
+    renderStepInstant(stepIndex); return;
+  }
+  jumpTo(stepIndex);
+}
+
+// ================= Заметки =================
+function openNote(s,l){
+  const n=noteAt(s,l);
+  sheet(n?"Ваша заметка":"Новая заметка",(b,close)=>{
+    const ta=h("textarea",{id:"noteText",placeholder:"Мысль, вопрос, с чем согласны или нет…"});
+    ta.value=n?n.text:"";
+    const save=()=>{
+      const text=ta.value.trim();
+      cur.notes=cur.notes.filter(x=>!(x.s===s && x.l===l));
+      if(text) cur.notes.push({s,l,text,at:Date.now()});
+      const notePct=cur.total?Math.round(s/cur.total*100):0;
+      if(text) track("note_saved",{book_id:cur.id, pct:notePct, is_edit:!!n, length:text.length, total_notes:cur.notes.length});
+      else if(n) track("note_deleted",{book_id:cur.id, pct:notePct, total_notes:cur.notes.length});
+      cur.notes.sort((a,b)=>a.s-b.s||a.l-b.l);
+      saveMeta(cur,true); redrawNote(s,l); close();
+    };
+    b.append(h("blockquote",{},steps[s].lines[l]), h("label",{for:"noteText"},"Ваша заметка"), ta,
+      h("div",{class:"btns"},
+        n ? h("button",{class:"btn danger",type:"button",onclick:()=>{ ta.value=""; save(); }},"Удалить") : null,
+        h("button",{class:"btn",type:"button",onclick:close},"Отмена"),
+        h("button",{class:"btn primary",type:"button",onclick:save},"Сохранить")));
+  });
+}
+function redrawNote(s,l){
+  const b=log.querySelector(`.book[data-s="${s}"][data-l="${l}"]`); if(!b) return;
+  const old=log.querySelector(`[data-note="${s}:${l}"]`); if(old) old.remove();
+  b.classList.toggle("has-note", !!noteAt(s,l));
+  renderNote(s,l,b);
+}
+
+// ================= Википедия =================
+const WIKI_LANGS=[["ru","Русская"],["en","Английская"],["uk","Украинская"],["de","Немецкая"],["fr","Французская"],["es","Испанская"],["it","Итальянская"],["el","Греческая"],["la","Латинская"]];
+const wikiBase = lang => `https://${lang}.wikipedia.org`;
+const WIKI_ERR = "Не удалось связаться с Википедией. Проверьте интернет. В предпросмотре внутри Claude внешние запросы закрыты, в Telegram-версии поиск работает.";
+async function wikiApi(lang, params){
+  const u=new URL(wikiBase(lang)+"/w/api.php");
+  Object.entries({...params, format:"json", formatversion:"2", origin:"*"}).forEach(([k,v])=>u.searchParams.set(k,v));
+  const r=await fetch(u.toString()); if(!r.ok) throw new Error("http "+r.status);
+  return r.json();
+}
+const stripTags = s => { const d=document.createElement("div"); d.innerHTML=s||""; return clean(d.textContent); };
+async function wikiSearch(lang,q,limit=8){
+  const j=await wikiApi(lang,{action:"query",list:"search",srsearch:q,srlimit:limit});
+  return ((j.query&&j.query.search)||[]).map(x=>({title:x.title, snippet:stripTags(x.snippet)}));
+}
+async function wikiSummary(lang,title){
+  const r=await fetch(`${wikiBase(lang)}/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g,"_"))}`);
+  if(!r.ok) throw new Error("http "+r.status);
+  const j=await r.json();
+  return {title:j.title, description:j.description||"", extract:j.extract||"", url:(j.content_urls&&j.content_urls.desktop&&j.content_urls.desktop.page)||`${wikiBase(lang)}/wiki/${encodeURIComponent(title)}`};
+}
+const CHAR_SECTION = /персонаж|действующие лица|герои|характеры|characters|cast|dramatis|figuren|personnages|personajes|personaggi/i;
+async function wikiCharacters(lang,title){
+  const s=await wikiApi(lang,{action:"parse",page:title,prop:"sections",redirects:"1"});
+  const secs=(s.parse&&s.parse.sections)||[];
+  const sec=secs.find(x=>CHAR_SECTION.test(stripTags(x.line)));
+  if(!sec) return {title:(s.parse&&s.parse.title)||title, list:[]};
+  const t=await wikiApi(lang,{action:"parse",page:title,prop:"text",section:sec.index,redirects:"1"});
+  return {title:(t.parse&&t.parse.title)||title, list:extractCharacters(t.parse&&t.parse.text||"", lang)};
+}
+function extractCharacters(html, lang){
+  const doc=new DOMParser().parseFromString(html,"text/html");
+  doc.querySelectorAll(".mw-editsection, sup, style, .reference, .reflist, .navbox, .mw-empty-elt, table").forEach(e=>e.remove());
+  const out=[], seen=new Set();
+  const linkOf = el => { const a=el.querySelector('a[href^="/wiki/"]'); return a ? wikiBase(lang)+a.getAttribute("href") : ""; };
+  const add=(name,desc,url)=>{
+    name=clean(name).replace(/[\s,:;—–-]+$/,""); desc=clean(desc).replace(/^[\s,:;—–-]+/,"");
+    if(!name || name.length<2 || name.length>70 || seen.has(name.toLowerCase())) return;
+    seen.add(name.toLowerCase());
+    const first = (desc.match(/^.{0,110}?[.;](\s|$)/)||[desc.slice(0,90)])[0].replace(/[.;]\s*$/,"");
+    out.push({name, role:first, bio:desc.slice(0,700), url});
+  };
+  doc.querySelectorAll("li").forEach(li=>{
+    const c=li.cloneNode(true); c.querySelectorAll("ul,ol").forEach(x=>x.remove());
+    const text=clean(c.textContent); if(!text) return;
+    const b=c.querySelector("b");
+    if(b && text.startsWith(clean(b.textContent))) return add(b.textContent, text.slice(clean(b.textContent).length), linkOf(b)||linkOf(c));
+    const m=text.match(/^(.{2,70}?)(\s[—–-]\s|:\s|,\s)(.*)$/);
+    if(m) return add(m[1], m[3], linkOf(c));
+  });
+  doc.querySelectorAll("dt").forEach(dt=>{
+    const dd=dt.nextElementSibling;
+    add(dt.textContent, dd&&dd.tagName==="DD" ? dd.textContent : "", linkOf(dt));
+  });
+  doc.querySelectorAll("p").forEach(p=>{
+    const b=p.querySelector("b"); if(!b) return;
+    const text=clean(p.textContent), bn=clean(b.textContent);
+    if(text.startsWith(bn)) add(bn, text.slice(bn.length), linkOf(b));
+  });
+  return out.slice(0,80);
+}
+function langPicker(id){
+  const sel=h("select",{id,"aria-label":"Раздел Википедии"});
+  const def = WIKI_LANGS.some(x=>x[0]===cur.lang) ? cur.lang : "ru";
+  WIKI_LANGS.forEach(([k,l])=>{ const o=h("option",{value:k},l+" Википедия"); if(k===def) o.selected=true; sel.append(o); });
+  return sel;
+}
+function addHeroes(list, method){
+  let added=0;
+  for(const x of list){
+    const ex=cur.heroes.find(hh=>hh.name.toLowerCase()===x.name.toLowerCase());
+    if(ex){ if(!ex.bio && x.bio) Object.assign(ex,x); continue; }
+    cur.heroes.push(x); added++;
+  }
+  saveMeta(cur,true); buildProfile(true);
+  track("heroes_added",{book_id:cur.id, method, offered:list.length, added, total_heroes:cur.heroes.length});
+  toast(added ? `Добавлено героев: ${added}` : "Эти герои уже есть в списке");
+}
+
+function findHeroesSheet(){
+  sheet("Герои из Википедии",(b,close)=>{
+    const lang=langPicker("wlang");
+    const q=h("input",{type:"search",id:"wq","aria-label":"Название произведения"}); q.value=cur.title;
+    const out=h("div");
+    const go=async()=>{
+      out.innerHTML=""; out.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Ищу статьи…"));
+      try{
+        const res=await wikiSearch(lang.value, q.value.trim()||cur.title);
+        track("heroes_search",{book_id:cur.id, method:"article", wiki_lang:lang.value, results:res.length});
+        out.innerHTML="";
+        if(!res.length){ out.append(h("p",{class:"msgline"},"Статей не нашлось. Попробуйте другое название или другой раздел Википедии.")); return; }
+        out.append(h("p",{class:"msgline"},"Выберите статью о произведении:"));
+        res.forEach(r=>out.append(h("button",{class:"res",type:"button",onclick:()=>pickArticle(r.title)},h("b",{},r.title),h("span",{},r.snippet))));
+      }catch(_){ out.innerHTML=""; out.append(h("p",{class:"msgline"},WIKI_ERR)); track("heroes_search_failed",{book_id:cur.id}); }
+    };
+    const pickArticle=async title=>{
+      out.innerHTML=""; out.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Ищу список персонажей в статье «"+title+"»…"));
+      try{
+        const r=await wikiCharacters(lang.value,title);
+        track("heroes_article_parsed",{book_id:cur.id, wiki_lang:lang.value, found:r.list.length});
+        out.innerHTML="";
+        if(!r.list.length){
+          out.append(h("p",{class:"msgline"},`В статье «${r.title}» нет раздела с персонажами. Выберите другую статью или добавьте героев по имени.`),
+            h("button",{class:"btn",type:"button",onclick:go},"Назад к результатам"));
+          return;
+        }
+        const boxes=r.list.map(x=>{ const cb=h("input",{type:"checkbox",checked:true}); return {cb,x}; });
+        const count=h("span");
+        const upd=()=>{ count.textContent=`Добавить (${boxes.filter(o=>o.cb.checked).length})`; };
+        boxes.forEach(o=>o.cb.addEventListener("change",upd)); upd();
+        out.append(h("p",{class:"msgline"},`Найдено в статье «${r.title}»: ${r.list.length}. Снимите отметки с лишних.`),
+          ...boxes.map(({cb,x})=>h("label",{class:"check"},cb,h("div",{},h("b",{},x.name),x.role?h("span",{},x.role):null))),
+          h("p",{class:"src"},"Источник: Википедия, лицензия CC BY-SA."),
+          h("div",{class:"btns"},
+            h("button",{class:"btn",type:"button",onclick:go},"Назад"),
+            h("button",{class:"btn primary",type:"button",onclick:()=>{ addHeroes(boxes.filter(o=>o.cb.checked).map(o=>({...o.x,src:"wiki"})),"article"); close(); }},count)));
+      }catch(_){ out.innerHTML=""; out.append(h("p",{class:"msgline"},WIKI_ERR)); track("heroes_search_failed",{book_id:cur.id}); }
+    };
+    q.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
+    b.append(h("label",{for:"wlang"},"Раздел"), lang,
+      h("label",{for:"wq"},"Произведение"), h("div",{class:"srow"}, q, h("button",{class:"btn primary",type:"button",onclick:go},"Искать")),
+      out);
+  });
+}
+function heroByNameSheet(){
+  sheet("Добавить героя",(b,close)=>{
+    const lang=langPicker("hlang");
+    const q=h("input",{type:"search",id:"hq",placeholder:"Например, Печорин"});
+    const out=h("div");
+    const go=async()=>{
+      const name=q.value.trim(); if(!name) return;
+      out.innerHTML=""; out.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Ищу…"));
+      try{
+        let res=await wikiSearch(lang.value, `${name} ${cur.title}`, 6);
+        if(!res.length) res=await wikiSearch(lang.value, name, 6);
+        track("heroes_search",{book_id:cur.id, method:"name", wiki_lang:lang.value, results:res.length});
+        out.innerHTML="";
+        if(!res.length){
+          out.append(h("p",{class:"msgline"},"В Википедии ничего не нашлось. Можно добавить героя без справки."),
+            h("div",{class:"btns"},h("button",{class:"btn primary",type:"button",onclick:()=>{ addHeroes([{name,role:"",bio:""}],"manual"); close(); }},"Добавить «"+name+"» без справки")));
+          return;
+        }
+        res.forEach(r=>out.append(h("button",{class:"res",type:"button",onclick:()=>preview(r.title)},h("b",{},r.title),h("span",{},r.snippet))));
+      }catch(_){ out.innerHTML=""; out.append(h("p",{class:"msgline"},WIKI_ERR)); track("heroes_search_failed",{book_id:cur.id}); }
+    };
+    const preview=async title=>{
+      out.innerHTML=""; out.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Загружаю справку…"));
+      try{
+        const s=await wikiSummary(lang.value,title);
+        const nameIn=h("input",{type:"text",id:"hname"}); nameIn.value=q.value.trim()||s.title;
+        out.innerHTML="";
+        out.append(h("label",{for:"hname"},"Имя в списке героев"), nameIn,
+          h("p",{class:"desc",style:"margin-top:12px"},h("b",{},s.title), s.description?" — "+s.description:""),
+          h("p",{class:"desc",style:"margin-top:6px"},s.extract),
+          h("p",{class:"src"},"Источник: Википедия, лицензия CC BY-SA."),
+          h("div",{class:"btns"},
+            h("button",{class:"btn",type:"button",onclick:go},"Назад"),
+            h("button",{class:"btn primary",type:"button",onclick:()=>{ addHeroes([{name:nameIn.value.trim()||s.title, role:s.description, bio:s.extract, url:s.url, src:"wiki"}],"name"); close(); }},"Добавить")));
+      }catch(_){ out.innerHTML=""; out.append(h("p",{class:"msgline"},WIKI_ERR)); track("heroes_search_failed",{book_id:cur.id}); }
+    };
+    q.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
+    b.append(h("label",{for:"hlang"},"Раздел"), lang,
+      h("label",{for:"hq"},"Имя героя"), h("div",{class:"srow"}, q, h("button",{class:"btn primary",type:"button",onclick:go},"Найти")),
+      out);
+  });
+}
+
+// ================= Профиль книги =================
+const profile=$("profile");
+function openProfile(){
+  if(busy) return;
+  buildProfile(); profile.classList.add("open"); profileOpen=true;
+  track("profile_opened",{book_id:cur.id, pct:pctOf(cur), heroes:cur.heroes.length, notes:cur.notes.length}); $("pscroll").scrollTop=0; $("back").focus(); syncBack();
+}
+function closeProfile(){ profile.classList.remove("open"); profileOpen=false; syncBack(); }
+$("headbtn").addEventListener("click", openProfile);
+$("back").addEventListener("click", closeProfile);
+
+const secEl = (title, ...kids) => h("div",{class:"sec"}, h("h3",{},title), ...kids);
+function buildProfile(keepScroll){
+  const P=$("pscroll"), top=P.scrollTop; P.innerHTML="";
+  P.append(h("div",{class:"hero"}, cover(cur),
+    h("h2",{},cur.fullTitle||cur.title),
+    h("p",{},[cur.author, cur.translator].filter(Boolean).join(". "))));
+
+  P.append(secEl("Описание", ...((cur.description&&cur.description.length)
+    ? cur.description.map(t=>h("p",{class:"desc"},t))
+    : [h("p",{class:"empty"},"В файле нет описания книги.")])));
+
+  // Герои
+  const hb=h("div");
+  if(cur.heroes.length){
+    cur.heroes.forEach((x,i)=>{
+      const id="bio"+i;
+      const bio=h("div",{class:"bio",id,hidden:true},
+        x.bio ? h("p",{},x.bio) : h("p",{class:"empty"},"Справки пока нет."),
+        h("div",{class:"links"},
+          x.url ? h("button",{class:"linkbtn",type:"button",onclick:()=>{ track("hero_wiki_link",{book_id:cur.id}); openLink(x.url); }},"Статья в Википедии") : null,
+          h("button",{class:"linkbtn danger",type:"button",onclick:()=>{ track("hero_removed",{book_id:cur.id, source:x.src||"builtin"}); cur.heroes.splice(i,1); saveMeta(cur,true); buildProfile(true); }},"Убрать из списка")));
+      const row=h("button",{class:"row",type:"button","aria-expanded":"false","aria-controls":id},
+        h("span",{class:"ini",style:`background:${colorOf(x.name)}`,"aria-hidden":"true"},x.name[0]),
+        h("span",{class:"t"},h("b",{},x.name), x.role?h("span",{},x.role):null),
+        h("span",{class:"chev","aria-hidden":"true"},"›"));
+      row.addEventListener("click",()=>{ const o=row.getAttribute("aria-expanded")==="true"; row.setAttribute("aria-expanded",String(!o)); bio.hidden=o;
+        if(!o) track("hero_viewed",{book_id:cur.id, source:x.src||"builtin", has_bio:!!x.bio}); });
+      hb.append(row,bio);
+    });
+  } else hb.append(h("p",{class:"empty"},"Героев пока нет. Их можно найти в Википедии по статье о произведении или добавить по имени."));
+  hb.append(h("button",{class:"act",type:"button",onclick:findHeroesSheet},"Найти героев в Википедии"),
+    h("button",{class:"act",type:"button",onclick:heroByNameSheet},"Добавить героя по имени"));
+  if(cur.heroes.some(x=>x.src==="wiki")) hb.append(h("p",{class:"src"},"Часть справок взята из Википедии (CC BY-SA)."));
+  P.append(secEl(cur.heroes.length?`Герои, ${cur.heroes.length}`:"Герои", hb));
+
+  // Оглавление
+  const tb=h("div"); const here=Math.max(0,cur.pos-1); let chips=null;
+  toc.forEach((e,idx)=>{
+    const nextE=toc.find((x,j)=>j>idx && x.step>e.step);
+    const isHere = cur.pos>0 && e.step<=here && (!nextE || nextE.step>here);
+    if(/^[\dIVXLC]+$/.test(e.text)){
+      if(!chips){ chips=h("div",{class:"chips"}); tb.append(chips); }
+      chips.append(h("button",{class:"chip"+(e.step<cur.pos?" read":"")+(isHere?" here":""),type:"button","aria-label":"Раздел "+e.text,onclick:()=>jumpTo(e.step)},e.text));
+    } else {
+      chips=null;
+      tb.append(h("button",{class:"toc-title",type:"button",onclick:()=>jumpTo(e.step)},h("span",{},e.text),h("small",{},e.step<cur.pos?"прочитано":"")));
+    }
+  });
+  if(!toc.length) tb.append(h("p",{class:"empty"},"В книге не нашлось заголовков."));
+  P.append(secEl("Оглавление", tb));
+
+  // Заметки
+  const nb=h("div");
+  if(cur.notes.length) cur.notes.forEach(n=>nb.append(h("button",{class:"nrow",type:"button",onclick:()=>showAt(n.s)},
+    h("q",{},(steps[n.s]&&steps[n.s].lines[n.l])||""), h("span",{},n.text))));
+  else nb.append(h("p",{class:"empty"},"Заметок пока нет. Нажмите на любое сообщение в чате, чтобы её оставить."));
+  P.append(secEl(cur.notes.length?`Заметки, ${cur.notes.length}`:"Заметки", nb));
+
+  // Тема
+  const seg=h("div",{class:"seg",role:"group","aria-label":"Тема"});
+  [["light","Светлая"],["dark","Тёмная"],["auto",inTG?"Как в Telegram":"Как в системе"]].forEach(([k,l])=>
+    seg.append(h("button",{type:"button","data-theme-opt":k,"aria-pressed":String(themePref===k),onclick:()=>applyTheme(k,true)},l)));
+  P.append(secEl("Тема", seg));
+
+  P.append(secEl("Книга",
+    h("button",{class:"act",type:"button",onclick:()=>{ track("book_reset",{...bookProps(cur), pct_before:pctOf(cur), source:"profile"}); closeProfile(); cur.pos=0; saveMeta(cur,true); renderChat(); }},"Читать с начала"),
+    h("button",{class:"act",type:"button",onclick:showLibrary},"Вернуться в библиотеку")));
+  if(keepScroll) P.scrollTop=top;
+}
+
+// ================= Игра «Путь на Олимп» =================
+const GODS = [
+  {id:"zeus",n:"Зевс",g:"m",c:"#3F5C9E",d:"Громовержец, владыка неба"},
+  {id:"hera",n:"Гера",g:"f",c:"#8E3B6E",d:"Царица богов, хранительница брака"},
+  {id:"poseidon",n:"Посейдон",g:"m",c:"#1F6F8B",d:"Владыка морей и землетрясений"},
+  {id:"demeter",n:"Деметра",g:"f",c:"#8A7A1F",d:"Богиня плодородия и урожая"},
+  {id:"athena",n:"Афина",g:"f",c:"#5E6B7A",d:"Богиня мудрости и справедливой войны"},
+  {id:"apollo",n:"Аполлон",g:"m",c:"#B7801A",d:"Бог света, музыки и искусств"},
+  {id:"artemis",n:"Артемида",g:"f",c:"#4F6F52",d:"Богиня охоты и луны"},
+  {id:"ares",n:"Арес",g:"m",c:"#9B2C2C",d:"Бог яростной войны"},
+  {id:"aphrodite",n:"Афродита",g:"f",c:"#B84E73",d:"Богиня любви и красоты"},
+  {id:"hephaestus",n:"Гефест",g:"m",c:"#8A4B2A",d:"Бог огня и кузнечного дела"},
+  {id:"hermes",n:"Гермес",g:"m",c:"#2F7A74",d:"Вестник богов, покровитель путников"},
+  {id:"dionysus",n:"Дионис",g:"m",c:"#6B3E8C",d:"Бог вина и театра"},
+  {id:"hades",n:"Аид",g:"m",c:"#3A3A4A",d:"Владыка подземного царства"},
+  {id:"hestia",n:"Гестия",g:"f",c:"#B5562C",d:"Богиня домашнего очага"}
+];
+const KRONOS = {id:"kronos",n:"Кронос",g:"m",c:"#4A4038",d:"Титан, отец Зевса, пожирающий время"};
+const MONSTERS = [
+  {id:"sphinx",n:"Сфинкс",g:"m",d:"Задаёт загадки у ворот Фив и губит тех, кто не может ответить."},
+  {id:"chimera",n:"Химера",g:"f",d:"Огнедышащее чудовище: голова льва, тело козы, хвост-змея."},
+  {id:"minotaur",n:"Минотавр",g:"m",d:"Человек с головой быка, узник Критского лабиринта."},
+  {id:"hydra",n:"Лернейская гидра",g:"f",d:"Многоголовая змея: на месте отрубленной головы вырастают две."},
+  {id:"medusa",n:"Медуза Горгона",g:"f",d:"Её взгляд обращает в камень всякого, кто на неё посмотрит."},
+  {id:"polyphemus",n:"Полифем",g:"m",d:"Одноглазый циклоп, сын Посейдона, пленивший Одиссея."},
+  {id:"cerberus",n:"Цербер",g:"m",d:"Трёхголовый пёс, страж выхода из царства мёртвых."},
+  {id:"typhon",n:"Тифон",g:"m",d:"Самое страшное чудовище, бросившее вызов самому Зевсу."}
+];
+const SUMMIT_ORDER = ["hermes","artemis","apollo","ares","athena","poseidon","hera","dionysus","hephaestus","demeter","aphrodite","hades","hestia"];
+const RHYTHMS = [["1","Каждый день",0],["2","Через день",1],["3","Раз в три дня",2]];
+const GOALS = [5,10,15,30,50];
+const RETREAT = 3, MAX_MOVES = 6;
+
+// Доска: 8 × 16, дорога змейкой снизу вверх
+const COLS=8, ROWS=16, CS=64;
+const ROUTE = (()=>{
+  const r=[]; let k=0;
+  for(let row=ROWS-1; row>=1; row-=2){
+    const cols = k%2===0 ? [1,2,3,4,5,6] : [6,5,4,3,2,1];
+    cols.forEach(c=>r.push([c,row]));
+    if(row-1>=2) r.push([cols[5],row-1]);
+    k++;
+  }
+  r.push([r[r.length-1][0],0]);
+  return r;
+})();
+const LAST = ROUTE.length-1;
+const SLOTS = [
+  ...[5,10,15,20,25,30,34,38].map((i,m)=>({i,kind:"monster",m,power:[1,1.2,1.4,1.6,1.8,2,2.2,2.5][m]})),
+  ...[42,45,48,51,53].map((i,k)=>({i,kind:"god",k,power:[2.5,2.8,3,3.3,3.6][k]})),
+  {i:54,kind:"final",power:4.5}
+];
+const FINAL_SLOT = SLOTS.length-1;
+
+let G=null;
+const godById = id => GODS.find(x=>x.id===id) || KRONOS;
+const me = () => godById(G.god);
+const ending = (g, m, f) => g==="f" ? f : m;
+function guardian(si){
+  const s=SLOTS[si];
+  if(s.kind==="monster") return {...MONSTERS[s.m], kind:"monster"};
+  if(s.kind==="final") return G.god==="zeus" ? {...KRONOS, kind:"final"} : {...GODS[0], kind:"final"};
+  const opp = SUMMIT_ORDER.filter(id=>id!==G.god && id!=="zeus");
+  return {...godById(opp[s.k]), kind:"god"};
+}
+const guardAt = pos => SLOTS.findIndex(s=>s.i===pos);
+const guardHP = si => Math.ceil(G.goal*SLOTS[si].power);
+const cellCost = () => Math.max(2, Math.round(G.goal/2));
+const grace = () => (RHYTHMS.find(r=>r[0]===G.rhythm)||RHYTHMS[0])[2];
+const dayKey = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function addDays(key,n){ const [y,m,d]=key.split("-").map(Number); return dayKey(new Date(y,m-1,d+n)); }
+const fmtDay = key => { const [y,m,d]=key.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString("ru-RU",{day:"numeric",month:"long"}); };
+const todayCount = () => (G && G.log[dayKey()]) || 0;
+function saveGame(){ if(G) putJSON("g",G); }
+function gEvent(text, day){ G.events.unshift({d:day||dayKey(), t:text}); G.events=G.events.slice(0,40); }
+
+function newGame(god, goal, rhythm){
+  G={god, goal, rhythm, pos:0, carry:0, hp:null, defeated:[], throne:false, miss:0,
+     log:{}, moves:{d:"",n:0}, settled:addDays(dayKey(),-1), started:Date.now(), events:[], best:0};
+  const g=me();
+  gEvent(`${g.n} ${ending(g.g,"начал","начала")} восхождение на Олимп. Норма: ${goal} сообщений, ${RHYTHMS.find(r=>r[0]===rhythm)[1].toLowerCase()}.`);
+  saveGame();
+}
+function retreat(day){
+  const g=me();
+  if(G.throne){
+    G.throne=false; G.defeated=G.defeated.filter(x=>x!==FINAL_SLOT);
+    const f=guardian(FINAL_SLOT);
+    gEvent(`${g.n} ${ending(g.g,"свергнут","свергнута")} с Олимпа. ${f.n} снова на троне.`, day);
+    track("game_dethroned",{god:G.god});
+  }
+  const from=G.pos; G.pos=Math.max(0,G.pos-RETREAT); G.hp=null; G.carry=0;
+  if(from!==G.pos) gEvent(`Норма не выполнена. ${g.n} ${ending(g.g,"отступил","отступила")} на ${from-G.pos} ${from-G.pos===1?"клетку":"клетки"}.`, day);
+  track("game_retreat",{god:G.god, from, to:G.pos});
+}
+function settle(){
+  if(!G) return false;
+  const yest=addDays(dayKey(),-1); let d=addDays(G.settled,1), changed=false;
+  while(d<=yest){
+    if((G.log[d]||0)>=G.goal) G.miss=0;
+    else { G.miss++; if(G.miss>grace()) retreat(d); }
+    G.settled=d; d=addDays(d,1); changed=true;
+  }
+  if(changed){
+    const keep=addDays(dayKey(),-60);
+    Object.keys(G.log).forEach(k=>{ if(k<keep) delete G.log[k]; });
+    saveGame();
+  }
+  return changed;
+}
+function gain(n){
+  if(!G) return [];
+  settle();
+  const t=dayKey(), before=G.log[t]||0, notes=[], g=me();
+  G.log[t]=before+n;
+  if(G.moves.d!==t) G.moves={d:t,n:0};
+  for(let i=0;i<n;i++){
+    if(G.throne) break;
+    const si=guardAt(G.pos);
+    if(si>=0 && !G.defeated.includes(si)){
+      if(G.hp==null) G.hp=guardHP(si);
+      G.hp--;
+      if(G.hp<=0){
+        const x=guardian(si); G.defeated.push(si); G.hp=null;
+        const txt=`${g.n} ${ending(g.g,"победил","победила")}: ${x.n} ${ending(x.g,"повержен","повержена")}!`;
+        notes.push(txt); gEvent(txt); track("game_guardian_defeated",{god:G.god, slot:si, kind:x.kind, guardian:x.id});
+      }
+      continue;
+    }
+    if(G.pos>=LAST) continue;
+    G.carry++;
+    if(G.carry>=cellCost() && G.moves.n<MAX_MOVES){
+      G.carry=0; G.pos++; G.moves.n++; G.best=Math.max(G.best,G.pos);
+      const ns=guardAt(G.pos);
+      if(ns>=0 && !G.defeated.includes(ns)){
+        const x=guardian(ns); G.hp=guardHP(ns);
+        const txt=`На пути ${x.n}. Чтобы ${ending(x.g,"его","её")} одолеть, нужно прочитать ${G.hp} сообщений.`;
+        notes.push(txt); gEvent(txt);
+      }
+      if(G.pos===LAST){
+        G.throne=true;
+        const txt=`${g.n} ${ending(g.g,"взошёл","взошла")} на трон Олимпа!`;
+        notes.push(txt); gEvent(txt); track("game_throne_reached",{god:G.god, days:daysSince(G.started)});
+      }
+    }
+  }
+  if(before<G.goal && G.log[t]>=G.goal){ notes.push(`Норма на сегодня выполнена. ${g.n} ${ending(g.g,"доволен","довольна")}!`); track("game_daily_goal",{god:G.god, goal:G.goal}); }
+  saveGame(); renderPet();
+  return notes;
+}
+function danger(){ return G && !G.throne && todayCount()<G.goal && G.miss+1>grace() && G.miss>=0 && Object.keys(G.log).length>0; }
+function dangerAny(){ return G && todayCount()<G.goal && G.miss+1>grace(); }
+
+// ---------- Символы богов (SVG) ----------
+function godSymbol(id){
+  const f='fill="#F6EBD0"', s='stroke="#F6EBD0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+  switch(id){
+    case "zeus": return `<path ${f} d="M27 6 14 27h9l-4 15 15-23h-9l4-13z"/>`;
+    case "hera": return `<path ${f} d="M10 34 12 15l7 9 5-12 5 12 7-9 2 19z"/><rect ${f} x="10" y="35" width="28" height="4" rx="1"/>`;
+    case "poseidon": return `<path ${s} d="M24 42V12M14 8v9c0 5 20 5 20 0V8M24 6v6"/>`;
+    case "demeter": return `<path ${s} d="M24 42V8"/><g ${f}>${[12,19,26,33].map(y=>`<ellipse cx="19" cy="${y}" rx="4" ry="2.4" transform="rotate(-35 19 ${y})"/><ellipse cx="29" cy="${y}" rx="4" ry="2.4" transform="rotate(35 29 ${y})"/>`).join("")}</g>`;
+    case "athena": return `<path ${f} d="M13 14l4 5M35 14l-4 5"/><path ${s} d="M13 13l5 6M35 13l-5 6"/><ellipse ${f} cx="24" cy="28" rx="11" ry="13"/><circle cx="19.5" cy="24" r="4.2" fill="#2A2A2A"/><circle cx="28.5" cy="24" r="4.2" fill="#2A2A2A"/><circle cx="20" cy="23.5" r="1.4" fill="#F6EBD0"/><circle cx="29" cy="23.5" r="1.4" fill="#F6EBD0"/><path d="M22.5 29h3l-1.5 2.5z" fill="#2A2A2A"/>`;
+    case "apollo": return `<circle ${f} cx="24" cy="24" r="8"/><g ${s}>${[0,45,90,135,180,225,270,315].map(a=>{const r=a*Math.PI/180;return `<path d="M${24+12*Math.cos(r)} ${24+12*Math.sin(r)}L${24+17*Math.cos(r)} ${24+17*Math.sin(r)}"/>`;}).join("")}</g>`;
+    case "artemis": return `<path ${f} d="M31 6A18 18 0 1 0 31 42A9 18 0 0 1 31 6Z"/>`;
+    case "ares": return `<path ${f} d="M12 31q0-19 12-19t12 19v7h-7V28H19v10h-7z"/><path ${s} d="M19 12q5-9 10 0"/>`;
+    case "aphrodite": return `<path ${f} d="M8 34Q24 2 40 34z"/><path d="M24 34 13 21M24 34 18 15M24 34V12M24 34l6-19M24 34l11-13" stroke="#8A4B5E" stroke-width="1.6" fill="none"/>`;
+    case "hephaestus": return `<rect ${f} x="11" y="9" width="26" height="11" rx="2"/><rect ${f} x="21" y="19" width="6" height="23" rx="2"/>`;
+    case "hermes": return `<path ${f} d="M24 27Q11 11 5 15q4 5 8 7-5 0-6 4 7 3 17 1zM24 27q13-16 19-12-4 5-8 7 5 0 6 4-7 3-17 1z"/><circle ${f} cx="24" cy="29" r="4"/>`;
+    case "dionysus": return `<g ${f}>${[[20,20],[28,20],[24,26],[16,26],[32,26],[20,32],[28,32],[24,38]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4"/>`).join("")}</g><path ${s} d="M24 16V8q5-2 9 2"/>`;
+    case "hades": return `<path ${s} d="M24 42V14M16 6v9c0 6 16 6 16 0V6"/>`;
+    case "hestia": return `<path ${f} d="M24 5q12 13 9 24-2 12-9 13-7-1-9-13-1-8 6-14 0 8 4 10 3-9-1-20z"/>`;
+    case "kronos": return `<path ${s} d="M14 42 26 20"/><path ${f} d="M26 20Q30 6 42 10 34 10 30 24z"/>`;
+    default: return `<text x="24" y="31" text-anchor="middle" font-size="22" font-family="PT Serif, Georgia, serif" fill="#F6EBD0">?</text>`;
+  }
+}
+function medal(id, opts={}){
+  const g = id ? godById(id) : {c:"#6B7478"};
+  const ring = opts.ring!=null ? `<circle cx="24" cy="24" r="23" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="2.5"/><circle cx="24" cy="24" r="23" fill="none" stroke="#E7C15A" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="${(Math.min(1,opts.ring)*144.5).toFixed(1)} 145" transform="rotate(-90 24 24)"/>` : `<circle cx="24" cy="24" r="23" fill="none" stroke="#E7C15A" stroke-width="2"/>`;
+  return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="${g.c}"/>${ring}<g transform="translate(9.6 9.6) scale(.6)">${godSymbol(id)}</g></svg>`;
+}
+
+// ---------- Виджет на главной ----------
+let petMin=false;
+function petText(){
+  if(!G) return {t:"Бог-покровитель", s:"Выберите бога и ведите его на Олимп: чем больше читаете, тем выше он поднимается."};
+  settle();
+  const g=me(), c=todayCount(), left=Math.max(0,G.goal-c), cnt=`Сегодня ${c} из ${G.goal}.`;
+  if(G.throne) return {t:`${g.n} на Олимпе`, s: left ? `Я правлю Олимпом! Чтобы удержать трон, прочитай сегодня ещё ${left}.` : `Я правлю Олимпом, и трон в безопасности. ${cnt}`, warn:dangerAny()};
+  if(dangerAny()) return {t:g.n, s:`Мы пропустили чтение. Если сегодня не прочитать ещё ${left}, я отступлю.`, warn:true};
+  const si=guardAt(G.pos);
+  if(si>=0 && !G.defeated.includes(si)){ const x=guardian(si); return {t:g.n, s:`Бьюсь: ${x.n}. Ещё ${G.hp??guardHP(si)} сообщений — и победа! ${cnt}`}; }
+  if(!left) return {t:g.n, s:`Норма есть, я набираюсь сил. Клетка ${G.pos+1} из ${LAST+1}.`};
+  return {t:g.n, s:`${cnt} Ещё ${left} — и я ${ending(g.g,"стану сильнее","стану сильнее")}.`};
+}
+function renderPet(){
+  const box=$("pet"); if(!box) return;
+  box.innerHTML="";
+  const p=petText(), happy=G && todayCount()>=G.goal, worried=G && p.warn;
+  const medBtn=h("button",{class:"petMedal"+(happy?" happy":worried?" worried":""),type:"button","aria-label":G?`${me().n}: путь на Олимп`:"Выбрать бога-покровителя",onclick:openOlympus});
+  medBtn.innerHTML=medal(G&&G.god, G?{ring:todayCount()/G.goal}:{});
+  if(!petMin){
+    const bub=h("div",{class:"petBubble"+(p.warn?" warn":""),role:"button",tabindex:"0",onclick:openOlympus,onkeydown:e=>{if(e.key==="Enter")openOlympus();}},
+      h("b",{},p.t), p.s,
+      h("button",{class:"x",type:"button","aria-label":"Свернуть",onclick:e=>{e.stopPropagation(); petMin=true; LS.set("petMin","1"); renderPet();}},"×"));
+    box.append(bub);
+  }
+  box.append(medBtn);
+}
+
+// ---------- Экран Олимпа ----------
+function openOlympus(){
+  if(!G){ gameSetup(); return; }
+  petMin=false; LS.del("petMin");
+  settle();
+  track("olympus_opened",{god:G.god, pos:G.pos, throne:G.throne});
+  view="oly"; $("libView").hidden=true; $("readView").hidden=true; $("olyView").hidden=false; syncBack();
+  renderOlympus(true);
+}
+$("olyBack").addEventListener("click", showLibrary);
+$("olySet").addEventListener("click", ()=>gameSetup());
+
+function renderOlympus(scrollToMe){
+  const O=$("oscroll"); O.innerHTML="";
+  const g=me(), c=todayCount();
+  const card=h("div",{class:"ocard"}, h("div",{class:"med"}), h("div",{class:"info"},
+    h("b",{},g.n), h("span",{},g.d), h("span",{},`Норма: ${G.goal} сообщений, ${RHYTHMS.find(r=>r[0]===G.rhythm)[1].toLowerCase()}`)));
+  card.querySelector(".med").innerHTML=medal(G.god,{ring:c/G.goal});
+  O.append(card);
+  const beaten=G.defeated.length;
+  O.append(h("div",{class:"ostat"},
+    h("div",{},h("b",{},`${G.pos+1}/${LAST+1}`),h("span",{},"клетка")),
+    h("div",{},h("b",{},`${c}/${G.goal}`),h("span",{},"сегодня")),
+    h("div",{},h("b",{},`${beaten}/${SLOTS.length}`),h("span",{},"побеждено"))));
+  const si=guardAt(G.pos);
+  if(G.throne){
+    O.append(h("div",{class:"fight throne"}, `${g.n} ${ending(g.g,"правит","правит")} Олимпом. Читайте в своём ритме, чтобы удержать трон: при пропуске ${ending(g.g,"его","её")} свергнут.`,
+      h("div",{class:"bar"},h("i",{style:`width:${Math.min(100,c/G.goal*100)}%`})), h("small",{class:"pct"},`Сегодня ${c} из ${G.goal}`)));
+  } else if(si>=0 && !G.defeated.includes(si)){
+    const x=guardian(si), max=guardHP(si), hp=G.hp??max;
+    O.append(h("div",{class:"fight"}, h("b",{},`Битва: ${x.n}`), h("br"), x.d||"",
+      h("div",{class:"bar"},h("i",{style:`width:${hp/max*100}%`})), h("small",{class:"pct"},`Осталось прочитать ${hp} из ${max} сообщений`)));
+  } else {
+    const nxt=SLOTS.findIndex(s=>s.i>G.pos && !G.defeated.includes(SLOTS.indexOf(s)));
+    const toNext = nxt>=0 ? SLOTS[nxt].i-G.pos : LAST-G.pos;
+    O.append(h("div",{class:"fight"}, nxt>=0 ? `До следующего стража (${guardian(nxt).n}) ${toNext} ${toNext===1?"клетка":toNext<5?"клетки":"клеток"}.` : `До трона Олимпа ${toNext} клеток.`,
+      h("br"), h("small",{class:"pct"},`Одна клетка — ${cellCost()} сообщений, не больше ${MAX_MOVES} клеток в день.`)));
+  }
+  const board=h("div",{class:"board"}); board.innerHTML=boardSVG();
+  board.querySelectorAll(".gd").forEach(el=>{
+    const open=()=>guardInfo(+el.dataset.si);
+    el.addEventListener("click",open); el.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); open(); } });
+  });
+  O.append(board, h("div",{class:"olegend"},
+    h("span",{},h("i",{style:"background:#7A2E2E"}),"чудовища"),
+    h("span",{},h("i",{style:"background:#B08A2E"}),"боги Олимпа"),
+    h("span",{},h("i",{style:"background:#5A2A7A"}),"хозяин трона"),
+    h("span",{},h("i",{style:"background:#8E948F"}),"побеждены")));
+  const ch=h("div",{class:"chron"},h("h3",{},"Летопись"));
+  G.events.slice(0,15).forEach(e=>ch.append(h("p",{},h("small",{},fmtDay(e.d)),e.t)));
+  O.append(ch);
+  if(scrollToMe){
+    const y=ROUTE[G.pos][1];
+    requestAnimationFrame(()=>{ const svg=board.querySelector("svg"); if(!svg) return;
+      const scale=svg.getBoundingClientRect().width/(COLS*CS);
+      O.scrollTop = board.offsetTop + (y*CS)*scale - O.clientHeight/2; });
+  }
+}
+function guardInfo(si){
+  const x=guardian(si), done=G.defeated.includes(si);
+  track("olympus_guardian_viewed",{slot:si, guardian:x.id});
+  sheet(x.n,(b)=>{
+    b.append(h("p",{class:"desc"},x.d),
+      h("p",{class:"hint"}, done ? `${ending(x.g,"Повержен","Повержена")}.` : `Сила: ${guardHP(si)} сообщений. Клетка ${SLOTS[si].i+1}.`));
+  });
+}
+
+// ---------- Отрисовка доски ----------
+function rng(seed){ let s=seed>>>0; return ()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296; }; }
+const ZONE = row => row<=2 ? "sky" : row<=8 ? "rock" : row<=13 ? "meadow" : "shore";
+const ZCOL = {sky:["#E9ECF1","#DCE1E9"], rock:["#CDBFA6","#BEAF94"], meadow:["#BACB8C","#AABD7C"], shore:["#E6D4A4","#D8C48E"]};
+const deco = {
+  olive:(x,y)=>`<rect x="${x+29}" y="${y+34}" width="6" height="18" rx="2" fill="#6B5139"/><circle cx="${x+24}" cy="${y+30}" r="11" fill="#7F9366"/><circle cx="${x+38}" cy="${y+28}" r="10" fill="#8CA072"/><circle cx="${x+31}" cy="${y+20}" r="11" fill="#95A97B"/>`,
+  cypress:(x,y)=>`<rect x="${x+30}" y="${y+48}" width="4" height="8" fill="#5A4430"/><ellipse cx="${x+32}" cy="${y+30}" rx="8" ry="21" fill="#3E5B3A"/><ellipse cx="${x+30}" cy="${y+28}" rx="3" ry="14" fill="#4B6B45"/>`,
+  rock:(x,y)=>`<path d="M${x+12} ${y+50}l8-20 12-8 14 10 8 18z" fill="#948878"/><path d="M${x+20} ${y+30}l12-8 6 4-10 6z" fill="#ADA293"/>`,
+  boulders:(x,y)=>`<ellipse cx="${x+24}" cy="${y+44}" rx="14" ry="9" fill="#8F8373"/><ellipse cx="${x+42}" cy="${y+46}" rx="9" ry="7" fill="#A29684"/>`,
+  cave:(x,y)=>`<path d="M${x+6} ${y+56}q4-38 26-42 22 4 26 42z" fill="#8A7E6E"/><path d="M${x+20} ${y+56}q2-18 12-20 10 2 12 20z" fill="#2E2A26"/>`,
+  column:(x,y)=>`<rect x="${x+22}" y="${y+14}" width="20" height="5" fill="#F3EEE2"/><rect x="${x+25}" y="${y+19}" width="14" height="30" fill="#EAE3D2"/><path d="M${x+29} ${y+19}v30M${x+35} ${y+19}v30" stroke="#CFC6B0" stroke-width="1.5"/><rect x="${x+20}" y="${y+49}" width="24" height="5" fill="#F3EEE2"/>`,
+  broken:(x,y)=>`<rect x="${x+14}" y="${y+30}" width="12" height="22" fill="#E6DECB"/><path d="M${x+14} ${y+30}l6-4 6 3z" fill="#E6DECB"/><rect x="${x+34}" y="${y+46}" width="20" height="8" rx="2" fill="#DDD4BF" transform="rotate(-8 ${x+44} ${y+50})"/>`,
+  flowers:(x,y)=>[[16,40,"#D9A7C7"],[26,48,"#F2E6A0"],[40,38,"#E8C1D6"],[46,50,"#F7F1DC"],[32,30,"#D4B3E2"]].map(([a,b,c])=>`<circle cx="${x+a}" cy="${y+b}" r="3" fill="${c}"/>`).join(""),
+  sheep:(x,y)=>`<ellipse cx="${x+30}" cy="${y+38}" rx="12" ry="8" fill="#F7F4EC"/><circle cx="${x+43}" cy="${y+35}" r="4.5" fill="#3B3632"/><path d="M${x+24} ${y+45}v6M${x+34} ${y+45}v6" stroke="#3B3632" stroke-width="2"/>`,
+  waves:(x,y)=>`<rect x="${x}" y="${y}" width="${CS}" height="${CS}" fill="#7FA9B8" opacity=".85"/><path d="M${x+6} ${y+22}q7-6 13 0t13 0 13 0 13 0M${x+2} ${y+42}q7-6 13 0t13 0 13 0 13 0" stroke="#E7F1F3" stroke-width="2.5" fill="none"/>`,
+  reeds:(x,y)=>`<path d="M${x+22} ${y+54}q-2-20 2-30M${x+30} ${y+54}q0-24 4-34M${x+38} ${y+54}q2-18 6-26" stroke="#7E8B4E" stroke-width="3" fill="none"/>`,
+  cloud:(x,y)=>`<g fill="#FFFFFF" opacity=".95"><circle cx="${x+22}" cy="${y+36}" r="11"/><circle cx="${x+36}" cy="${y+30}" r="14"/><circle cx="${x+48}" cy="${y+38}" r="9"/><rect x="${x+14}" y="${y+36}" width="42" height="10" rx="5"/></g>`
+};
+const DECO_BY_ZONE = {shore:["waves","reeds","rock","boulders"], meadow:["olive","olive","cypress","flowers","sheep","column"], rock:["rock","rock","boulders","cypress","cypress","broken","cave"], sky:["cloud","cloud","column"]};
+const LANDMARKS = [
+  {row:14, c:1, w:2, name:"Гавань", draw:(x,y)=>`<rect x="${x}" y="${y}" width="${2*CS}" height="${CS}" fill="#7FA9B8"/><path d="M${x+22} ${y+40}h70l-10 12H${x+32}z" fill="#7A4F2E"/><path d="M${x+57} ${y+40}V${y+8}l26 28z" fill="#F4EEDD"/><path d="M${x+55} ${y+40}V${y+12}L${x+36} ${y+36}z" fill="#E7DCC0"/><path d="M${x+56} ${y+40}V${y+6}" stroke="#5A3E26" stroke-width="2"/>`},
+  {row:12, c:3, w:2, name:"Театр", draw:(x,y)=>[46,36,26,16].map((r,i)=>`<path d="M${x+64-r*1.3} ${y+54}a${r*1.3} ${r} 0 0 1 ${r*2.6} 0" fill="none" stroke="${i%2?"#D9CFB8":"#EAE2CE"}" stroke-width="8"/>`).join("")+`<rect x="${x+46}" y="${y+50}" width="36" height="8" fill="#CFC4AA"/>`},
+  {row:10, c:1, w:2, name:"Храм", draw:(x,y)=>`<path d="M${x+14} ${y+18}L${x+64} ${y+4}L${x+114} ${y+18}z" fill="#EFE8D8"/><rect x="${x+14}" y="${y+18}" width="100" height="5" fill="#E2D9C4"/>${[20,40,60,80,100].map((d,i)=>i===3?`<rect x="${x+d}" y="${y+40}" width="9" height="14" fill="#E6DECB"/>`:`<rect x="${x+d}" y="${y+23}" width="9" height="31" fill="#EDE6D5"/>`).join("")}<rect x="${x+10}" y="${y+54}" width="108" height="6" fill="#DDD4BF"/>`},
+  {row:8, c:4, w:2, name:"Пещера Аида", draw:(x,y)=>`<path d="M${x+4} ${y+62}q10-56 60-58 50 2 60 58z" fill="#7F7466"/><path d="M${x+40} ${y+62}q4-30 24-32 20 2 24 32z" fill="#231F1C"/><ellipse cx="${x+64}" cy="${y+58}" rx="14" ry="4" fill="#C5562C" opacity=".7"/>`},
+  {row:6, c:2, w:2, name:"Дельфы", draw:(x,y)=>deco.column(x-4,y)+deco.column(x+68,y)+`<path d="M${x+52} ${y+54}l12-26 12 26M${x+64} ${y+28}v26" stroke="#8C6A2E" stroke-width="3" fill="none"/><ellipse cx="${x+64}" cy="${y+27}" rx="11" ry="4" fill="#B48A3C"/><path d="M${x+60} ${y+22}q4-10 8-14 1 8-2 12" fill="#DDE3E8" opacity=".8"/>`},
+  {row:4, c:4, w:2, name:"Скалы титанов", draw:(x,y)=>`<path d="M${x+2} ${y+62}l20-44 16 10 18-26 22 30 14-14 22 44z" fill="#8C8072"/><path d="M${x+56} ${y+2}l8 12-12 4z" fill="#F4F5F7"/>`},
+  {row:2, c:2, w:2, name:"Врата Олимпа", draw:(x,y)=>deco.column(x+4,y+2)+deco.column(x+60,y+2)+`<rect x="${x+22}" y="${y+10}" width="84" height="8" fill="#E9C766"/>`},
+  {row:0, c:2, w:6, name:"Чертоги Олимпа", draw:(x,y)=>`<path d="M${x+10} ${y+22}L${x+192} ${y+4}L${x+374} ${y+22}z" fill="#F7F2E4"/><path d="M${x+60} ${y+20}L${x+192} ${y+8}L${x+324} ${y+20}z" fill="#E9C766" opacity=".55"/><rect x="${x+10}" y="${y+22}" width="364" height="6" fill="#EDE5CF"/>${Array.from({length:11},(_,i)=>`<rect x="${x+22+i*34}" y="${y+28}" width="12" height="28" fill="#F5EFDF"/>`).join("")}<rect x="${x+4}" y="${y+56}" width="376" height="7" fill="#E4DBC3"/>`}
+];
+function boardSVG(){
+  const W_=COLS*CS, H_=ROWS*CS, route=new Set(ROUTE.map(([c,r])=>`${c},${r}`)), used=new Set();
+  let out=`<svg viewBox="0 0 ${W_} ${H_}" role="img" aria-label="Карта пути на Олимп: ${me().n} на клетке ${G.pos+1} из ${LAST+1}">`;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const z=ZCOL[ZONE(r)];
+    out+=`<rect x="${c*CS}" y="${r*CS}" width="${CS}" height="${CS}" fill="${z[(r+c)%2]}"/>`;
+  }
+  LANDMARKS.forEach(L=>{ for(let k=0;k<L.w;k++) used.add(`${L.c+k},${L.row}`); });
+  const rnd=rng(20260922);
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const key=`${c},${r}`, v=rnd();
+    if(route.has(key)||used.has(key)) continue;
+    if(v<0.18 && ZONE(r)!=="shore") continue;
+    const list=DECO_BY_ZONE[ZONE(r)];
+    const kind = (ZONE(r)==="shore" && (c===0||c===7)) ? "waves" : list[Math.floor(rnd()*list.length)];
+    out+=deco[kind](c*CS, r*CS);
+  }
+  LANDMARKS.forEach(L=>{ out+=`<g><title>${L.name}</title>${L.draw(L.c*CS, L.row*CS)}</g>`; });
+  const pts=ROUTE.map(([c,r])=>`${c*CS+CS/2},${r*CS+CS/2}`).join(" ");
+  out+=`<polyline points="${pts}" fill="none" stroke="#8C7A5B" stroke-width="22" stroke-linejoin="round" stroke-linecap="round"/>`;
+  out+=`<polyline points="${pts}" fill="none" stroke="#EFE5CE" stroke-width="15" stroke-linejoin="round" stroke-linecap="round"/>`;
+  out+=`<polyline points="${ROUTE.slice(0,G.pos+1).map(([c,r])=>`${c*CS+CS/2},${r*CS+CS/2}`).join(" ")}" fill="none" stroke="#E0B74A" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>`;
+  ROUTE.forEach(([c,r],i)=>{ if(i%5===4 && guardAt(i)<0 && i!==LAST) out+=`<text x="${c*CS+CS/2}" y="${r*CS+CS/2+4}" text-anchor="middle" font-size="11" font-family="PT Sans, sans-serif" fill="#8C7A5B">${i+1}</text>`; });
+  const [tc,tr]=ROUTE[LAST];
+  out+=`<g><title>Трон Олимпа</title><path d="M${tc*CS+18} ${tr*CS+54}V${tr*CS+16}q14-10 28 0v38zM${tc*CS+14} ${tr*CS+40}h36v6H${tc*CS+14}z" fill="#E0B74A" stroke="#8C6A2E" stroke-width="2"/></g>`;
+  SLOTS.forEach((s,si)=>{
+    const [c,r]=ROUTE[s.i], x=guardian(si), done=G.defeated.includes(si);
+    const here = G.pos===s.i && !done;
+    const cx=c*CS+CS/2+(here?12:0), cy=r*CS+CS/2;
+    const fill = done ? "#8E948F" : s.kind==="monster" ? "#7A2E2E" : s.kind==="final" ? "#5A2A7A" : "#B08A2E";
+    const inner = s.kind==="monster" || done
+      ? `<text x="${cx}" y="${cy+6}" text-anchor="middle" font-size="17" font-family="PT Serif, Georgia, serif" font-weight="700" fill="#F6EBD0">${done?"✓":x.n[0]}</text>`
+      : `<g transform="translate(${cx-12} ${cy-12}) scale(.5)">${godSymbol(x.id)}</g>`;
+    out+=`<g class="gd" data-si="${si}" tabindex="0" role="button" aria-label="${x.n}${done?", повержен":""}"><circle class="hit" cx="${cx}" cy="${cy}" r="19" fill="${fill}" stroke="#F6EBD0" stroke-width="2.5" opacity="${done?.75:1}"/>${inner}</g>`;
+  });
+  const [pc,pr]=ROUTE[G.pos]; const atG=guardAt(G.pos)>=0 && !G.defeated.includes(guardAt(G.pos));
+  const px=pc*CS+CS/2-(atG?14:0), py=pr*CS+CS/2-(G.throne?6:0);
+  out+=`<g><title>${me().n}</title><circle cx="${px}" cy="${py+3}" r="24" fill="rgba(0,0,0,.25)"/><circle cx="${px}" cy="${py}" r="23" fill="${me().c}" stroke="#E0B74A" stroke-width="4"/><g transform="translate(${px-14.4} ${py-14.4}) scale(.6)">${godSymbol(G.god)}</g></g>`;
+  return out+"</svg>";
+}
+
+// ---------- Настройка ----------
+function gameSetup(){
+  let god=G?G.god:"athena", goal=G?G.goal:15, rhythm=G?G.rhythm:"1";
+  sheet(G?"Настройки игры":"Бог-покровитель",(b,close)=>{
+    const grid=h("div",{class:"godgrid",role:"group","aria-label":"Выбор бога"});
+    const drawGods=()=>{ grid.innerHTML=""; GODS.forEach(x=>{
+      const o=h("button",{class:"godopt",type:"button","aria-pressed":String(god===x.id),onclick:()=>{god=x.id;drawGods();}});
+      o.innerHTML=medal(x.id); o.append(h("b",{},x.n), h("span",{},x.d)); grid.append(o); }); };
+    drawGods();
+    const goals=h("div",{class:"optrow",role:"group","aria-label":"Норма"});
+    const drawGoals=()=>{ goals.innerHTML=""; GOALS.forEach(v=>goals.append(h("button",{type:"button","aria-pressed":String(goal===v),onclick:()=>{goal=v;drawGoals();}},String(v)))); };
+    drawGoals();
+    const rh=h("div",{class:"optrow",role:"group","aria-label":"Ритм"});
+    const drawRh=()=>{ rh.innerHTML=""; RHYTHMS.forEach(([k,l])=>rh.append(h("button",{type:"button","aria-pressed":String(rhythm===k),onclick:()=>{rhythm=k;drawRh();}},l))); };
+    drawRh();
+    b.append(
+      h("label",{},"Кого вести на Олимп"), grid,
+      h("label",{},"Норма: сколько сообщений прочитать за день"), goals,
+      h("label",{},"Как часто нужно выполнять норму"), rh,
+      h("p",{class:"hint"},`Половина нормы продвигает бога на клетку (не больше ${MAX_MOVES} в день). Чтобы пройти стража, нужно прочитать его силу в сообщениях. Если ритм нарушен, бог отступает на ${RETREAT} клетки, а с трона Олимпа его свергают.`),
+      h("div",{class:"btns"},
+        G ? h("button",{class:"btn danger",type:"button",onclick:()=>{ close(); confirmSheet("Начать заново?","Бог вернётся к подножию горы, все победы и летопись будут стёрты.","Начать заново",()=>{ track("game_reset",{god:G.god,pos:G.pos}); newGame(god,goal,rhythm); renderPet(); if(view==="oly") renderOlympus(true); }); }},"Начать заново") : null,
+        h("button",{class:"btn",type:"button",onclick:close},"Отмена"),
+        h("button",{class:"btn primary",type:"button",onclick:()=>{
+          close();
+          if(!G){ newGame(god,goal,rhythm); track("game_started",{god,goal,rhythm}); openOlympus(); }
+          else {
+            const changedGod=G.god!==god;
+            track("game_settings_changed",{god,goal,rhythm,changed_god:changedGod});
+            if(changedGod){ const x=godById(god); gEvent(`Покровителем стал${ending(x.g,"","а")} ${x.n}.`); }
+            G.god=god; G.goal=goal; G.rhythm=rhythm; G.hp=null; saveGame(); renderPet(); if(view==="oly") renderOlympus(false);
+          }
+        }}, G?"Сохранить":"Начать восхождение")));
+  });
+}
+
+// ================= Запуск =================
+(async function init(){
+  applyTheme("auto");
+  renderLibrary();
+  if(ANALYTICS_ON) $("privacyNote").hidden=false;
+  petMin = LS.get("petMin")==="1";
+  renderPet();
+  const r=await getJSONMany(["lib","theme","u","g"]);
+  if(r.g && r.g.god){ G=r.g; G.events=G.events||[]; G.log=G.log||{}; G.defeated=G.defeated||[]; G.moves=G.moves||{d:"",n:0}; settle(); }
+  if(r.theme) applyTheme(r.theme);
+  lib = Array.isArray(r.lib) ? r.lib : ["demo"];
+  if(!r.lib) saveLib();
+  const ms=await getJSONMany(lib.map(id=>"b_"+id));
+  lib.forEach(id=>{ metas[id] = ms["b_"+id] || (id==="demo" ? demoMeta() : null); });
+  lib = lib.filter(id=>metas[id]);
+  (await idb.keys()).forEach(k=>have.add(k)); have.add("demo");
+  renderLibrary(); renderPet();
+  const u=r.u||{first:Date.now(), last:0, opens:0};
+  const all=lib.map(id=>metas[id]);
+  track("app_open",{first_open:!r.u, days_since_last_open:daysSince(u.last), opens_total:u.opens+1,
+    days_since_first_open:daysSince(u.first), library_size:lib.length,
+    books_reading:all.filter(m=>stateOf(m)==="reading").length, books_finished:all.filter(m=>stateOf(m)==="done").length});
+  u.last=Date.now(); u.opens++; putJSON("u",u);
+})();
+</script>
+</body>
+</html>
