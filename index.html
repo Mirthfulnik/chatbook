@@ -283,7 +283,8 @@ footer.rf{padding:10px 12px 12px;background:var(--panel);border-top:1px solid va
 .optrow button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .hint{font-size:13.5px;color:var(--muted);line-height:1.45;margin:8px 0 0}
 @media (prefers-reduced-motion: reduce){.petMedal.happy,.petMedal.worried{animation:none}}
-input[type=file]{display:none}
+#file{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0);pointer-events:none;left:0;top:0}
+label.addcover,label.iconbtn{cursor:pointer}
 @media (prefers-reduced-motion: reduce){.in,.sheet{animation:none}.dots span,.spinner{animation:none}.progress,.profile{transition:none}}
 </style>
 </head>
@@ -295,7 +296,7 @@ input[type=file]{display:none}
       <div class="ltop">
         <h1>Библиотека</h1>
         <button class="iconbtn themeBtn" aria-label="Сменить тему"></button>
-        <button class="iconbtn" id="addTop" aria-label="Добавить книгу"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        <label class="iconbtn" id="addTop" for="file" role="button" tabindex="0" aria-label="Добавить книгу"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></label>
       </div>
       <p class="lsub" id="lsub"></p>
       <div class="search">
@@ -344,7 +345,7 @@ input[type=file]{display:none}
       <div class="pscroll" id="pscroll"></div>
     </section>
   </section>
-  <input type="file" id="file" accept=".fb2,.epub,.txt,.xml,application/epub+zip,text/plain">
+  <input type="file" id="file" aria-label="Файл книги">
 </div>
 <script>
 "use strict";
@@ -650,16 +651,29 @@ function hashId(blocks){
   return "k"+h1.toString(36)+h2.toString(36)+s.length.toString(36);
 }
 async function readBook(file){
+  if(!file.size) throw new Error("файл пустой или недоступен для чтения");
   const buf = await file.arrayBuffer();
-  const name = file.name.toLowerCase();
+  const b = new Uint8Array(buf.slice(0,4));
+  const isZip = b[0]===0x50 && b[1]===0x4B;          // «PK»: epub, fb2.zip, zip
   let book;
-  if(name.endsWith(".epub")) book = await parseEPUB(buf);
-  else {
+  if(isZip){
+    const JSZip = await loadJSZip();
+    const zip = await JSZip.loadAsync(buf);
+    if(zip.file("META-INF/container.xml")) book = await parseEPUB(buf);
+    else {
+      const inner = Object.values(zip.files).find(f=>!f.dir && /\.fb2$/i.test(f.name))
+                 || Object.values(zip.files).find(f=>!f.dir && /\.txt$/i.test(f.name));
+      if(!inner) throw new Error("в архиве нет файла fb2 или txt");
+      const ib = await inner.async("arraybuffer"), text = decode(ib);
+      book = /<FictionBook/i.test(text.slice(0,3000)) ? parseFB2(text) : parseTXT(text);
+    }
+  } else {
     const text = decode(buf);
-    book = (name.endsWith(".fb2") || /<FictionBook/i.test(text.slice(0,2000))) ? parseFB2(text) : parseTXT(text);
+    if(/^\s*%PDF/.test(text.slice(0,10))) throw new Error("PDF пока не поддерживается");
+    book = /<FictionBook/i.test(text.slice(0,3000)) ? parseFB2(text) : parseTXT(text);
   }
   if(!book.blocks.some(b=>b[0]==="p")) throw new Error("не нашлось текста");
-  book.title = book.title || file.name.replace(/\.[^.]+$/,"");
+  book.title = book.title || file.name.replace(/(\.fb2)?\.[^.]+$/i,"");
   book.author = book.author || "Автор неизвестен";
   book.lang = (book.lang||guessLang(book.blocks)).slice(0,2);
   return book;
@@ -857,7 +871,7 @@ function renderLibrary(){
   $("gridHead").textContent = q ? "Найдено" : (filter==="all" ? "Мои книги" : FILTERS.find(f=>f[0]===filter)[1]);
   const g=$("grid"); g.innerHTML="";
   if(!q && filter==="all") g.append(h("div",{class:"tile"},
-    h("button",{class:"addcover",type:"button",onclick:pickFile},h("b",{"aria-hidden":"true"},"+"),"Добавить книгу"),
+    h("label",{class:"addcover",for:"file",role:"button",tabindex:"0",onkeydown:e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pickFile(); } }},h("b",{"aria-hidden":"true"},"+"),"Добавить книгу"),
     h("div",{class:"cap"},h("div",{class:"ttl"},h("span",{},"fb2, epub, txt")))));
   list.forEach(m=>{
     const miss=!have.has(m.id), st=stateOf(m);
@@ -877,7 +891,7 @@ $("q").addEventListener("input", ()=>{
   const len=$("q").value.trim().length;
   if(len) searchTimer=setTimeout(()=>track("library_search",{query_length:len, results:$("grid").querySelectorAll(".tile .cover").length, library_size:lib.length}),1500);
 });
-$("addTop").addEventListener("click", pickFile);
+$("addTop").addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pickFile(); } });
 
 function bookMenu(m){
   sheet(m.title,(b,close)=>{
@@ -900,10 +914,10 @@ function showLibrary(){
 }
 
 // ================= Загрузка файлов =================
-function pickFile(){ $("file").click(); }
+function pickFile(){ const inp=$("file"); try{ inp.value=""; }catch(_){} inp.click(); }
 $("file").addEventListener("change", async e=>{
-  const f=e.target.files[0]; e.target.value=""; if(!f) return;
-  const format=(f.name.match(/\.([a-z0-9]+)$/i)||[,"unknown"])[1].toLowerCase();
+  const f=e.target.files && e.target.files[0]; if(!f) return;
+  const format=(/\.fb2\.zip$/i.test(f.name) ? "fb2.zip" : (f.name.match(/\.([a-z0-9]+)$/i)||[,"unknown"])[1].toLowerCase());
   track("book_upload_started",{format, size_kb:Math.round(f.size/1024)});
   const wait=sheet("Загрузка",b=>b.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Обрабатываю «"+f.name+"»…")));
   try{
@@ -919,11 +933,15 @@ $("file").addEventListener("change", async e=>{
     } else {
       track("book_file_restored",{...bookProps(metas[id]), pct:pctOf(metas[id])});
     }
-    wait.close(); openReader(id);
+    wait.close(); e.target.value=""; openReader(id);
   }catch(err){
     wait.close();
     track("book_upload_failed",{format, error:String(err&&err.message||"unknown").slice(0,80)});
-    sheet("Не получилось",b=>b.append(h("p",{class:"desc"},"Не удалось прочитать файл: "+(err&&err.message||"неизвестная ошибка")+". Подойдут fb2, epub или txt.")));
+    e.target.value="";
+    sheet("Не получилось",b=>b.append(
+      h("p",{class:"desc"},"Не удалось прочитать файл: "+(err&&err.message||"неизвестная ошибка")+"."),
+      h("p",{class:"hint"},"Подойдут fb2, fb2.zip, epub или txt. Если книга пришла в чат Telegram, сначала сохраните её в «Файлы» (iPhone) или в загрузки (Android), а затем выберите оттуда."),
+      h("p",{class:"hint"},`Для поддержки: «${f.name}», ${Math.round(f.size/1024)} КБ, тип «${f.type||"не указан"}».`)));
   }
 });
 // ================= Чтение =================
