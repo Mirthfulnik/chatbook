@@ -1,4 +1,4 @@
-   <!doctype html>
+    <!doctype html>
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="utf-8">
@@ -15,6 +15,8 @@
                  Не меняйте её после запуска, иначе все пользователи посчитаются новыми.
    debug       — true, чтобы видеть отправляемые события в консоли браузера */
 window.APP_CONFIG = {
+  /* Адрес сервера подписок (Cloudflare Worker), например "https://chatbooks-api.ИМЯ.workers.dev".
+     Пока пусто, приложение бесплатное: пейволла нет. */
   apiBase: "https://chatbooks-api.chatgptnik.workers.dev",
   posthogKey: "",
   posthogHost: "https://eu.i.posthog.com",
@@ -312,12 +314,15 @@ footer.rf{padding:10px 12px 12px;background:var(--panel);border-top:1px solid va
 .agrid b{overflow-wrap:anywhere}
 .agrid b{display:block;font-size:20px}
 .agrid span{font-size:12.5px;color:var(--muted)}
-.aform{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.aform{display:grid;grid-template-columns:1fr;gap:12px}
 .aform label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0;line-height:1.3}
 .aform label.wide{grid-column:1/-1}
 .aform input{width:100%;min-width:0;font-size:16px;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
-.aform .srow{width:100%}
-.aform .srow button{flex:none;white-space:nowrap}
+.aform .srow{width:100%;flex-direction:column;gap:8px}
+.aform .srow button{width:100%;white-space:nowrap}
+.aform input[type=date]{min-height:42px}
+.acard .btns{flex-direction:column-reverse;align-items:stretch}
+.acard .btns .btn{width:100%;margin:0}
 .arow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px;min-width:0}
 .arow .t b,.arow .t span{overflow-wrap:anywhere}
 .arow button{flex:none;white-space:nowrap}
