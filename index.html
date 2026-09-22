@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ChatBook</title>
+<title>Книги-переписки</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 /* ============ НАСТРОЙКИ АНАЛИТИКИ ============
@@ -15,6 +15,9 @@
                  Не меняйте её после запуска, иначе все пользователи посчитаются новыми.
    debug       — true, чтобы видеть отправляемые события в консоли браузера */
 window.APP_CONFIG = {
+  /* Адрес сервера подписок (Cloudflare Worker), например "https://chatbooks-api.ИМЯ.workers.dev".
+     Пока пусто, приложение бесплатное: пейволла нет. */
+  apiBase: "",
   posthogKey: "",
   posthogHost: "https://eu.i.posthog.com",
   tgToken: "",
@@ -283,6 +286,43 @@ footer.rf{padding:10px 12px 12px;background:var(--panel);border-top:1px solid va
 .optrow button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .hint{font-size:13.5px;color:var(--muted);line-height:1.45;margin:8px 0 0}
 @media (prefers-reduced-motion: reduce){.petMedal.happy,.petMedal.worried{animation:none}}
+
+/* ---------- подписка ---------- */
+.billline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border-radius:12px;padding:10px 12px;margin:-4px 0 14px;font-size:14px;line-height:1.4}
+.billline span{flex:1;min-width:0}
+.billline button{padding:7px 12px;border-radius:9px;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer;font-size:14px}
+.pw-lead{margin:0 0 14px;font-size:15.5px;line-height:1.5}
+.plan{border:1px solid var(--line);background:var(--paper);border-radius:14px;padding:14px;margin-bottom:10px}
+.plan.best{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.plan .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--accent-ink);background:var(--accent);padding:2px 8px;border-radius:8px;margin-bottom:6px}
+.plan .price{font-size:24px;font-weight:700;font-family:var(--serif)}
+.plan .price s{font-size:16px;color:var(--muted);font-weight:400;margin-left:8px}
+.plan .sub{font-size:13.5px;color:var(--muted);margin:2px 0 10px;line-height:1.4}
+.plan .btn{width:100%}
+.promo{margin-top:14px}
+.promo .srow input{text-transform:uppercase}
+.pw-err{color:var(--danger);font-size:14px;margin:8px 0 0}
+.pw-foot{font-size:12.5px;color:var(--muted);line-height:1.45;margin:14px 0 0}
+/* ---------- админ-панель ---------- */
+.ascroll{flex:1;overflow-y:auto;padding:12px 12px 40px}
+.acard{background:var(--panel);border-radius:14px;padding:14px;margin-bottom:12px}
+.acard h3{margin:0 0 10px;font-size:15px;color:var(--accent)}
+.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.agrid div{background:var(--paper);border-radius:10px;padding:10px}
+.agrid b{display:block;font-size:20px}
+.agrid span{font-size:12.5px;color:var(--muted)}
+.aform{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.aform label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.aform label.wide{grid-column:1/-1}
+.aform input{font-size:16px;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.arow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.arow:first-of-type{border-top:0}
+.arow .t{flex:1;min-width:0}
+.arow .t b{font-family:ui-monospace,Menlo,monospace;font-size:14px}
+.arow .t span{display:block;color:var(--muted);font-size:12.5px}
+.arow button{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-size:13px}
+.arow .off{opacity:.55}
+.amsg{font-size:13.5px;margin:8px 0 0;color:var(--muted)}
 #file{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0);pointer-events:none;left:0;top:0}
 label.addcover,label.iconbtn{cursor:pointer}
 @media (prefers-reduced-motion: reduce){.in,.sheet{animation:none}.dots span,.spinner{animation:none}.progress,.profile{transition:none}}
@@ -295,10 +335,12 @@ label.addcover,label.iconbtn{cursor:pointer}
     <div class="lscroll" id="lscroll">
       <div class="ltop">
         <h1>Библиотека</h1>
+        <button class="iconbtn" id="adminBtn" hidden aria-label="Управление подпиской и промокодами"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></button>
         <button class="iconbtn themeBtn" aria-label="Сменить тему"></button>
         <label class="iconbtn" id="addTop" for="file" role="button" tabindex="0" aria-label="Добавить книгу"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></label>
       </div>
       <p class="lsub" id="lsub"></p>
+      <div id="billBox"></div>
       <div class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         <input type="search" id="q" placeholder="Название или автор" aria-label="Поиск по библиотеке">
@@ -311,6 +353,16 @@ label.addcover,label.iconbtn{cursor:pointer}
       <p class="legal" id="privacyNote" hidden>Приложение собирает обезличенную статистику: какие функции используются и как продвигается чтение. Тексты книг, заметки, имя и Telegram ID не передаются.</p>
     </div>
     <div class="pet" id="pet"></div>
+  </section>
+
+  <!-- Управление -->
+  <section class="view" id="admView" hidden aria-label="Управление">
+    <div class="obar">
+      <button class="iconbtn" id="admBack" aria-label="В библиотеку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <b>Управление</b>
+      <button class="iconbtn" id="admReload" aria-label="Обновить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+    </div>
+    <div class="ascroll" id="ascroll"></div>
   </section>
 
   <!-- Олимп -->
@@ -809,7 +861,7 @@ let view="lib", profileOpen=false;
 function goBack(){
   if(sheets.length) return sheets[sheets.length-1].close();
   if(profileOpen) return closeProfile();
-  if(view==="read" || view==="oly") return showLibrary();
+  if(view!=="lib") return showLibrary();
 }
 function syncBack(){
   if(!tgAtLeast("6.1")) return;
@@ -910,7 +962,7 @@ async function removeBook(id){
 function showLibrary(){
   if(profileOpen) closeProfile();
   sessionEnd("to_library");
-  view="lib"; $("readView").hidden=true; $("olyView").hidden=true; $("libView").hidden=false; renderLibrary(); renderPet(); syncBack();
+  view="lib"; $("readView").hidden=true; $("olyView").hidden=true; $("admView").hidden=true; $("libView").hidden=false; renderLibrary(); renderPet(); renderBilling(); syncBack();
 }
 
 // ================= Загрузка файлов =================
@@ -1015,6 +1067,7 @@ async function openReader(id){
 }
 async function next(fromJump){
   if(busy || cur.pos>=steps.length) return;
+  if(paywallNeeded()){ showPaywall("reader"); return; }
   busy=true; refresh();
   if(cur.pos>0 && !fromJump){ log.append(h("div",{class:"msg me in"},"Дальше")); scrollDown(); }
   const i=cur.pos, step=steps[i];
@@ -1030,7 +1083,7 @@ async function next(fromJump){
   }
   const stepPct=CFG.progressStepPct||5, before=Math.floor(pctOf(cur)/stepPct);
   if(cur.pos===0 && !cur.started) cur.started=Date.now();
-  cur.pos++; saveMeta(cur); sessionStep();
+  cur.pos++; saveMeta(cur); sessionStep(); countTrialStep();
   if(G) gain(step.lines.length).forEach((t,k)=>setTimeout(()=>toast(t), k*2700));
   const after=Math.floor(pctOf(cur)/stepPct);
   if(after>before) track("reading_progress",{...bookProps(cur), pct:after*stepPct, days_since_start:daysSince(cur.started)});
@@ -1725,6 +1778,221 @@ function gameSetup(){
   });
 }
 
+// ================= Подписка и пейволл =================
+const API = (CFG.apiBase||"").replace(/\/+$/,"");
+const BILLING_ON = !!API && inTG;
+let bill=null, billCache=null, trial={first:null, limit:0, read:0, over:false};
+const PW_ERR = {
+  invalid_code:"Такого промокода нет или он отключён.", expired:"Срок действия промокода истёк.",
+  used_up:"Лимит активаций этого промокода исчерпан.", already_used:"Вы уже активировали этот промокод.",
+  intro_unavailable:"Цена первого месяца больше недоступна.", already_subscribed:"Подписка уже оформлена.",
+  unauthorized:"Не удалось подтвердить вход через Telegram. Закройте и откройте приложение заново.",
+  network:"Нет связи с сервером. Проверьте интернет и попробуйте ещё раз."
+};
+async function api(path, body={}){
+  let r;
+  try{ r=await fetch(API+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:W.initData,...body})}); }
+  catch(_){ const e=new Error("network"); e.code="network"; throw e; }
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){ const e=new Error(j.error||("http_"+r.status)); e.code=j.error||"server_error"; throw e; }
+  return j;
+}
+async function refreshBilling(markPaywall){
+  if(!BILLING_ON) return null;
+  try{
+    bill=await api("/api/me",{markPaywall:!!markPaywall});
+    billCache={ent_until:bill.ent_until, at:Date.now()}; putJSON("bill",billCache);
+  }catch(_){}
+  renderBilling();
+  return bill;
+}
+function entitled(){
+  if(!BILLING_ON) return true;
+  if(bill) return bill.entitled && bill.ent_until>Date.now();
+  return !!(billCache && billCache.ent_until>Date.now());
+}
+const freePct = () => (bill && bill.offer && bill.offer.free_pct!=null) ? bill.offer.free_pct : 50;
+const saveTrial = () => putJSON("t", trial);
+// Бесплатный объём = заданный % первой начатой книги (в шагах «Дальше»), общий на все книги
+function paywallNeeded(){
+  if(!BILLING_ON || entitled()) return false;
+  if(!trial.first){ trial.first=cur.id; trial.limit=Math.max(1,Math.ceil(steps.length*freePct()/100)); trial.read=0; saveTrial(); }
+  if(trial.over || trial.read>=trial.limit){
+    if(!trial.over){ trial.over=true; saveTrial(); track("trial_ended",{book_id:cur.id, free_steps:trial.limit}); }
+    return true;
+  }
+  return false;
+}
+function countTrialStep(){ if(BILLING_ON && !entitled() && trial.first){ trial.read++; saveTrial(); renderBilling(); } }
+const stars = n => `${n} ⭐`;
+const rub = n => (bill && bill.offer.rub_per_star>0) ? ` (≈ ${Math.round(n*bill.offer.rub_per_star)} ₽)` : "";
+const plural = (n, one, few, many) => { const a=n%10, b=n%100; return a===1&&b!==11 ? one : a>=2&&a<=4&&(b<12||b>14) ? few : many; };
+function left(ms){
+  const t=Math.max(0,ms-Date.now()), d=Math.floor(t/86400000), hh=Math.floor(t%86400000/3600000), mm=Math.floor(t%3600000/60000);
+  return d ? `${d} д ${hh} ч` : hh ? `${hh} ч ${mm} мин` : `${mm} мин`;
+}
+const fmtUntil = ms => ms>=32503680000000 ? "навсегда" : "до "+new Date(ms).toLocaleDateString("ru-RU",{day:"numeric",month:"long"});
+
+function renderBilling(){
+  const box=$("billBox"); if(!box) return;
+  box.innerHTML="";
+  $("adminBtn").hidden = !(bill && bill.is_admin);
+  if(!BILLING_ON) return;
+  if(entitled()){
+    const until = bill ? bill.ent_until : billCache.ent_until;
+    const what = bill && bill.ent_source==="sub" ? "Подписка активна" : "Чтение открыто";
+    box.append(h("div",{class:"billline"},h("span",{},`${what} ${fmtUntil(until)}.`)));
+    return;
+  }
+  if(!trial.first) return;
+  const remain=Math.max(0,trial.limit-trial.read);
+  box.append(h("div",{class:"billline"},
+    h("span",{}, remain ? `Бесплатно осталось ${remain} ${plural(remain,"порция","порции","порций")} чтения.` : "Бесплатный фрагмент прочитан."),
+    h("button",{type:"button",onclick:()=>showPaywall("library")}, remain ? "Подписка" : "Продолжить чтение")));
+}
+
+let pwOpen=false;
+async function showPaywall(source){
+  if(pwOpen) return; pwOpen=true;
+  track("paywall_shown",{source, trial_read:trial.read, trial_limit:trial.limit});
+  const sh=sheet("Продолжение по подписке",(b)=>{ b.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Загружаю условия…")); });
+  const origClose=sh.close; sh.close=()=>{ pwOpen=false; origClose(); };
+  const st=await refreshBilling(true);
+  const b=sh.body; b.innerHTML="";
+  if(!st){
+    b.append(h("p",{class:"pw-lead"},PW_ERR.network),
+      h("div",{class:"btns"},h("button",{class:"btn primary",type:"button",onclick:()=>{ sh.close(); showPaywall(source); }},"Повторить")));
+    return;
+  }
+  if(st.entitled){ sh.close(); toast("Чтение открыто"); if(view==="read") next(false); return; }
+  const o=st.offer, err=h("p",{class:"pw-err",role:"alert"});
+  b.append(h("p",{class:"pw-lead"},"Бесплатный фрагмент прочитан. Оформите подписку, чтобы читать дальше эту и все остальные книги. Прогресс, заметки и Олимп сохранятся."));
+  if(o.intro_available){
+    b.append(h("div",{class:"plan best"},
+      h("span",{class:"tag"},"Первый месяц"),
+      h("div",{class:"price"},stars(o.intro_stars), h("s",{},stars(o.monthly_stars))),
+      h("div",{class:"sub"},`30 дней чтения${rub(o.intro_stars)}. Цена действует ещё ${left(o.intro_expires_at)}, потом можно продлить подпиской за ${stars(o.monthly_stars)} в месяц.`),
+      h("button",{class:"btn primary",type:"button",onclick:e=>pay("intro",e.currentTarget,sh,err)},`Оплатить ${stars(o.intro_stars)}`)));
+  } else {
+    b.append(h("div",{class:"plan best"},
+      h("div",{class:"price"},stars(o.monthly_stars)),
+      h("div",{class:"sub"},`30 дней${rub(o.monthly_stars)}, дальше продлевается автоматически. Отменить можно в любой момент.`),
+      h("button",{class:"btn primary",type:"button",onclick:e=>pay("sub",e.currentTarget,sh,err)},"Оформить подписку")));
+  }
+  const code=h("input",{type:"text",id:"promoIn",placeholder:"Промокод",autocomplete:"off",autocapitalize:"characters"});
+  const apply=h("button",{class:"btn",type:"button"},"Применить");
+  apply.addEventListener("click", async()=>{
+    const v=code.value.trim(); if(!v) return;
+    apply.disabled=true; err.textContent="";
+    try{
+      const r=await api("/api/promo",{code:v});
+      bill=r; billCache={ent_until:r.ent_until, at:Date.now()}; putJSON("bill",billCache);
+      track("promo_applied",{days:r.promo&&r.promo.days});
+      sh.close(); renderBilling();
+      toast(r.forever ? "Промокод применён: чтение открыто навсегда" : `Промокод применён: чтение открыто ${fmtUntil(r.ent_until)}`);
+      if(view==="read") next(false);
+    }catch(e){ err.textContent=PW_ERR[e.code]||"Не удалось применить промокод."; track("promo_failed",{error:e.code}); }
+    apply.disabled=false;
+  });
+  code.addEventListener("keydown",e=>{ if(e.key==="Enter") apply.click(); });
+  b.append(h("div",{class:"promo"},h("label",{for:"promoIn"},"Есть промокод?"),h("div",{class:"srow"},code,apply)), err,
+    h("p",{class:"pw-foot"},"Оплата проходит в Telegram Stars. Звёзды можно купить прямо в Telegram. Подписка продлевается каждые 30 дней, отменить её можно в настройках Telegram, в разделе Telegram Stars."));
+}
+async function pay(plan, btnEl, sh, err){
+  btnEl.disabled=true; err.textContent="";
+  try{
+    const {link}=await api("/api/invoice",{plan});
+    track("invoice_opened",{plan});
+    const done = async status=>{
+      track("invoice_closed",{plan,status});
+      if(status==="paid"){
+        sh.body.innerHTML=""; sh.body.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Оплата прошла, открываю чтение…"));
+        for(let i=0;i<12;i++){ await new Promise(r=>setTimeout(r,1500)); const s=await refreshBilling(); if(s && s.entitled) break; }
+        sh.close();
+        if(entitled()){ toast("Спасибо! Чтение открыто"); if(view==="read") next(false); }
+        else toast("Оплата получена, доступ появится через минуту. Откройте приложение заново, если он не появился.");
+      } else if(status==="failed"){ err.textContent="Платёж не прошёл. Попробуйте ещё раз."; btnEl.disabled=false; }
+      else btnEl.disabled=false;
+    };
+    if(tgAtLeast("6.1") && W.openInvoice) W.openInvoice(link, done);
+    else { openLink(link); btnEl.disabled=false; }
+  }catch(e){ err.textContent=PW_ERR[e.code]||"Не удалось создать платёж. Попробуйте позже."; btnEl.disabled=false; }
+}
+
+// ================= Админ-панель =================
+$("adminBtn").addEventListener("click", openAdmin);
+$("admBack").addEventListener("click", showLibrary);
+$("admReload").addEventListener("click", ()=>loadAdmin());
+function openAdmin(){ view="adm"; $("libView").hidden=true; $("admView").hidden=false; syncBack(); loadAdmin(); }
+const dt = ms => ms ? new Date(ms).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}) : "—";
+async function adminCall(action, extra={}){ return api("/api/admin",{action,...extra}); }
+async function loadAdmin(){
+  const A=$("ascroll"); A.innerHTML=""; A.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Загружаю…"));
+  let d; try{ d=await adminCall("overview"); }catch(e){ A.innerHTML=""; A.append(h("p",{class:"msgline"},e.code==="forbidden"?"Нет доступа.":PW_ERR.network)); return; }
+  A.innerHTML="";
+  const st=d.stats, s=d.settings;
+  A.append(h("div",{class:"acard"},h("h3",{},"Сводка"),h("div",{class:"agrid"},
+    ...[[st.users,"пользователей"],[st.active,"с открытым доступом"],[st.paying,"платящих сейчас"],[st.payments30,"оплат за 30 дней"],[stars(st.stars30),"получено за 30 дней"]]
+      .map(([v,l])=>h("div",{},h("b",{},String(v)),h("span",{},l))))));
+
+  // Цены и условия
+  const f={}; const inp=(k,label,wide)=>{ f[k]=h("input",{type:"number",inputmode:"decimal",min:"0",step:k==="rub_per_star"?"0.1":"1"}); f[k].value=s[k]; return h("label",{class:wide?"wide":""},label,f[k]); };
+  const msg=h("p",{class:"amsg"});
+  A.append(h("div",{class:"acard"},h("h3",{},"Цены и условия"),h("div",{class:"aform"},
+    inp("intro_stars","Первый месяц, ⭐"), inp("monthly_stars","Подписка в месяц, ⭐"),
+    inp("intro_window_hours","Сколько часов действует цена первого месяца"), inp("free_pct","Бесплатно, % первой книги"),
+    inp("rub_per_star","Подсказка: ₽ за 1 ⭐ (0 — не показывать)",true)),
+    h("div",{class:"btns"},h("button",{class:"btn primary",type:"button",onclick:async()=>{
+      const v={}; Object.keys(f).forEach(k=>v[k]=Number(f[k].value));
+      try{ await adminCall("saveSettings",{settings:v}); msg.textContent="Сохранено. Новые цены действуют для новых счетов."; track("admin_settings_saved",v); }
+      catch(e){ msg.textContent="Не сохранено: проверьте значения ("+e.code+")."; }
+    }},"Сохранить")), msg));
+
+  // Промокоды
+  const pc={code:h("input",{type:"text",placeholder:"SPRING30",autocapitalize:"characters"}), days:h("input",{type:"number",min:"0",value:"30"}),
+    max:h("input",{type:"number",min:"1",placeholder:"без ограничений"}), exp:h("input",{type:"date"}), note:h("input",{type:"text",placeholder:"для блогера, для друзей…"})};
+  const pmsg=h("p",{class:"amsg"});
+  const gen=()=>{ const a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; pc.code.value=Array.from(crypto.getRandomValues(new Uint8Array(8)),x=>a[x%a.length]).join(""); };
+  const list=h("div");
+  (d.promos||[]).forEach(p=>{
+    const uses = p.max_uses ? `${p.uses}/${p.max_uses}` : `${p.uses}`;
+    const until = p.expires_at ? `до ${new Date(p.expires_at).toLocaleDateString("ru-RU")}` : "бессрочно";
+    list.append(h("div",{class:"arow"},
+      h("div",{class:"t"+(p.active?"":" off")},h("b",{},p.code),h("span",{},`${p.days?p.days+" дн.":"навсегда"} · активаций ${uses} · ${until}${p.note?" · "+p.note:""}`)),
+      h("button",{type:"button",onclick:async()=>{ await adminCall("togglePromo",{code:p.code,active:!p.active}); loadAdmin(); }}, p.active?"Отключить":"Включить")));
+  });
+  if(!(d.promos||[]).length) list.append(h("p",{class:"amsg"},"Промокодов пока нет."));
+  A.append(h("div",{class:"acard"},h("h3",{},"Промокоды"),
+    h("div",{class:"aform"},
+      h("label",{class:"wide"},"Код",h("div",{class:"srow"},pc.code,h("button",{class:"btn",type:"button",onclick:gen},"Сгенерировать"))),
+      h("label",{},"Дней доступа (0 — навсегда)",pc.days), h("label",{},"Лимит активаций",pc.max),
+      h("label",{},"Действует до",pc.exp), h("label",{},"Заметка",pc.note)),
+    h("div",{class:"btns"},h("button",{class:"btn primary",type:"button",onclick:async()=>{
+      try{
+        await adminCall("createPromo",{code:pc.code.value, days:Number(pc.days.value), max_uses:pc.max.value, expires_at:pc.exp.value?new Date(pc.exp.value+"T23:59:59").getTime():null, note:pc.note.value});
+        track("admin_promo_created",{days:Number(pc.days.value)}); loadAdmin();
+      }catch(e){ pmsg.textContent={bad_code:"Код: 3–32 символа, латиница, цифры, - и _.",code_exists:"Такой код уже есть.",bad_days:"Проверьте число дней.",bad_max_uses:"Проверьте лимит."}[e.code]||("Ошибка: "+e.code); }
+    }},"Создать промокод")), pmsg, list));
+
+  // Доступ вручную
+  const gid=h("input",{type:"number",placeholder:"Telegram ID"}), gdays=h("input",{type:"number",min:"0",value:"30"}), gmsg=h("p",{class:"amsg"});
+  A.append(h("div",{class:"acard"},h("h3",{},"Доступ вручную"),h("div",{class:"aform"},
+    h("label",{},"Telegram ID пользователя",gid), h("label",{},"Дней (0 — навсегда)",gdays)),
+    h("div",{class:"btns"},
+      h("button",{class:"btn",type:"button",onclick:async()=>{ try{ await adminCall("revoke",{userId:Number(gid.value)}); gmsg.textContent="Доступ закрыт."; }catch(e){ gmsg.textContent="Ошибка: "+e.code; } }},"Закрыть доступ"),
+      h("button",{class:"btn primary",type:"button",onclick:async()=>{ try{ const r=await adminCall("grant",{userId:Number(gid.value),days:Number(gdays.value)}); gmsg.textContent="Доступ открыт "+fmtUntil(r.ent_until)+"."; }catch(e){ gmsg.textContent="Ошибка: "+e.code; } }},"Открыть доступ")), gmsg));
+
+  // Платежи
+  const pl=h("div");
+  (d.payments||[]).forEach(p=>pl.append(h("div",{class:"arow"},
+    h("div",{class:"t"+(p.refunded?" off":"")},h("b",{},stars(p.stars)),h("span",{},`${dt(p.at)} · ${p.plan==="intro"?"первый месяц":p.is_recurring?"подписка":"подписка"} · ID ${p.user_id}${p.refunded?" · возврат":""}`)),
+    p.refunded ? null : h("button",{type:"button",onclick:()=>confirmSheet("Вернуть платёж?",`${stars(p.stars)} вернутся пользователю ${p.user_id}, доступ закроется${p.plan==="sub"?", подписка будет отменена":""}.`,"Вернуть",async()=>{
+      try{ await adminCall("refund",{chargeId:p.charge_id}); toast("Платёж возвращён"); loadAdmin(); }catch(e){ toast("Не удалось: "+e.code); }
+    })},"Возврат"))));
+  if(!(d.payments||[]).length) pl.append(h("p",{class:"amsg"},"Платежей пока нет."));
+  A.append(h("div",{class:"acard"},h("h3",{},"Последние платежи"),pl));
+}
+
 // ================= Запуск =================
 (async function init(){
   applyTheme("auto");
@@ -1732,7 +2000,10 @@ function gameSetup(){
   if(ANALYTICS_ON) $("privacyNote").hidden=false;
   petMin = LS.get("petMin")==="1";
   renderPet();
-  const r=await getJSONMany(["lib","theme","u","g"]);
+  const r=await getJSONMany(["lib","theme","u","g","t","bill"]);
+  if(r.t) trial={...trial, ...r.t};
+  if(r.bill) billCache=r.bill;
+  refreshBilling(false);
   if(r.g && r.g.god){ G=r.g; G.events=G.events||[]; G.log=G.log||{}; G.defeated=G.defeated||[]; G.moves=G.moves||{d:"",n:0}; settle(); }
   if(r.theme) applyTheme(r.theme);
   lib = Array.isArray(r.lib) ? r.lib : ["demo"];
