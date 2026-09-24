@@ -1,10 +1,9 @@
- 
-  <!doctype html>
+ <!doctype html>
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ChatBook v1.4</title>
+<title>ChatBook v1.5</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 /* ============ НАСТРОЙКИ АНАЛИТИКИ ============
@@ -96,6 +95,14 @@ body{overflow-x:hidden}
 .ltop{display:flex;align-items:center;gap:4px}
 .ltop .logo{width:40px;height:auto;flex:none;margin:4px 6px 0 0}
 .ltop .iconbtn{width:36px}
+.addcover.catcover{border-style:solid;border-color:var(--accent);background:var(--panel)}
+.optrow[hidden]{display:none}
+.catcover svg{width:30px;height:30px}
+.catrow{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line)}
+.catrow .t{min-width:0;flex:1}
+.catrow .t b{display:block;font-size:15.5px;line-height:1.3}
+.catrow .t span{display:block;font-size:13.5px;color:var(--muted);line-height:1.4;margin-top:2px}
+.catrow .btn{flex:none;padding:8px 14px}
 .iconbtn[hidden]{display:none}
 .ltop h1{flex:1;min-width:0;margin:4px 0 0;font-family:var(--serif);font-size:clamp(22px,6.2vw,30px);line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lsub{margin:2px 0 14px;color:var(--muted);font-size:14px;line-height:1.4}
@@ -699,6 +706,7 @@ async function parseEPUB(buf){
     const f = zip.file(decodeURIComponent(base + href.split("#")[0])); if(!f) continue;
     const html = new DOMParser().parseFromString(await f.async("string"),"text/html");
     html.querySelectorAll("sup, a").forEach(a=>{ if(/^\[?\d{1,3}\]?$/.test(a.textContent.trim())) a.remove(); });
+    html.querySelectorAll(".pg-boilerplate, #pg-header, #pg-footer, #pg-machine-header").forEach(e=>e.remove());
     html.querySelectorAll("h1,h2,h3,h4,h5,h6,p").forEach(el=>{
       if(/^H\d$/.test(el.tagName)){ const t=clean(el.textContent); if(t) blocks.push(["h",t]); }
       else pushPara(blocks, el.textContent);
@@ -712,6 +720,15 @@ function parseTXT(text){
   const byBlank = text.split(/\r?\n\s*\r?\n/);
   for(const part of (byBlank.length > 20 ? byBlank : text.split(/\r?\n/))) pushPara(blocks, part);
   return {author:"", title:"", description:[], lang:"", blocks};
+}
+// Шапка и лицензия Project Gutenberg идут до строки «*** START OF …» и после «*** END OF …»
+function stripGutenberg(blocks){
+  const START=/\*{3}\s*START OF (THE|THIS) PROJECT GUTENBERG/i, END=/\*{3}\s*END OF (THE|THIS) PROJECT GUTENBERG/i;
+  const i=blocks.findIndex(b=>START.test(b[1]));
+  let out = i>=0 && i<400 ? blocks.slice(i+1) : blocks;
+  const j=out.findIndex(b=>END.test(b[1]));
+  if(j>=0) out=out.slice(0,j);
+  return out;
 }
 function guessLang(blocks){
   const sample = blocks.filter(b=>b[0]==="p").slice(0,30).map(b=>b[1]).join(" ");
@@ -745,6 +762,7 @@ async function readBook(file){
     if(/^\s*%PDF/.test(text.slice(0,10))) throw new Error("PDF пока не поддерживается");
     book = /<FictionBook/i.test(text.slice(0,3000)) ? parseFB2(text) : parseTXT(text);
   }
+  book.blocks = stripGutenberg(book.blocks);
   if(!book.blocks.some(b=>b[0]==="p")) throw new Error("не нашлось текста");
   book.title = book.title || file.name.replace(/(\.fb2)?\.[^.]+$/i,"");
   book.author = book.author || "Автор неизвестен";
@@ -946,6 +964,11 @@ function renderLibrary(){
   if(!q && filter==="all") g.append(h("div",{class:"tile"},
     h("label",{class:"addcover",for:"file",role:"button",tabindex:"0",onkeydown:e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pickFile(); } }},h("b",{"aria-hidden":"true"},"+"),"Добавить книгу"),
     h("div",{class:"cap"},h("div",{class:"ttl"},h("span",{},"fb2, epub, txt")))));
+  if(!q && filter==="all" && CATALOG_ON) g.append(h("div",{class:"tile"},
+    h("button",{class:"addcover catcover",type:"button",onclick:catalogSheet},
+      svgIcon('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h9l5 5v5"/><path d="M14 3v5h5"/><circle cx="15.5" cy="17.5" r="3"/><path d="M21 22l-3.3-2.3"/></svg>'),
+      "Найти в каталоге"),
+    h("div",{class:"cap"},h("div",{class:"ttl"},h("span",{},"Бесплатные книги")))));
   list.forEach(m=>{
     const miss=!have.has(m.id), st=stateOf(m);
     const label = miss ? "Файл на другом устройстве" : st==="done" ? "Прочитано" : st==="reading" ? `${pctOf(m)}%` : "Новая";
@@ -988,24 +1011,33 @@ function showLibrary(){
 
 // ================= Загрузка файлов =================
 function pickFile(){ const inp=$("file"); try{ inp.value=""; }catch(_){} inp.click(); }
+// Добавляет книгу из файла в библиотеку и возвращает её id. extra — данные из каталога: название, автор, источник.
+async function importBook(f, format, extra){
+  extra = extra || {};
+  const bk=await readBook(f);
+  const id=hashId(bk.blocks);
+  await idb.put({id, blocks:bk.blocks}); have.add(id);
+  if(!metas[id]){
+    const title = extra.title || bk.title, author = extra.author || bk.author;
+    metas[id]={id, title, author, narrator:author, lang:bk.lang, description:bk.description,
+      format, heroes:[], notes:[], pos:0, total:0, added:Date.now(), opened:0};
+    if(extra.translator) metas[id].translator = "Перевод: " + extra.translator;
+    if(extra.source) metas[id].source = extra.source;
+    lib.unshift(id); await saveLib(); await saveMeta(metas[id],true);
+    track("book_added",{book_id:id, book_format:format, book_lang:bk.lang, paragraphs:bk.blocks.length,
+      has_description:!!(bk.description&&bk.description.length), library_size:lib.length, origin: extra.source ? "catalog" : "upload"});
+  } else {
+    track("book_file_restored",{...bookProps(metas[id]), pct:pctOf(metas[id])});
+  }
+  return id;
+}
 $("file").addEventListener("change", async e=>{
   const f=e.target.files && e.target.files[0]; if(!f) return;
   const format=(/\.fb2\.zip$/i.test(f.name) ? "fb2.zip" : (f.name.match(/\.([a-z0-9]+)$/i)||[,"unknown"])[1].toLowerCase());
   track("book_upload_started",{format, size_kb:Math.round(f.size/1024)});
   const wait=sheet("Загрузка",b=>b.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Обрабатываю «"+f.name+"»…")));
   try{
-    const bk=await readBook(f);
-    const id=hashId(bk.blocks);
-    await idb.put({id, blocks:bk.blocks}); have.add(id);
-    if(!metas[id]){
-      metas[id]={id, title:bk.title, author:bk.author, narrator:bk.author, lang:bk.lang, description:bk.description,
-        format, heroes:[], notes:[], pos:0, total:0, added:Date.now(), opened:0};
-      lib.unshift(id); await saveLib(); await saveMeta(metas[id],true);
-      track("book_added",{book_id:id, book_format:format, book_lang:bk.lang, paragraphs:bk.blocks.length,
-        has_description:!!(bk.description&&bk.description.length), library_size:lib.length});
-    } else {
-      track("book_file_restored",{...bookProps(metas[id]), pct:pctOf(metas[id])});
-    }
+    const id=await importBook(f, format);
     wait.close(); e.target.value=""; openReader(id);
   }catch(err){
     wait.close();
@@ -1394,7 +1426,8 @@ function buildProfile(keepScroll){
 
   P.append(secEl("Описание", ...((cur.description&&cur.description.length)
     ? cur.description.map(t=>h("p",{class:"desc"},t))
-    : [h("p",{class:"empty"},"В файле нет описания книги.")])));
+    : [h("p",{class:"empty"},"В файле нет описания книги.")]),
+    cur.source ? h("p",{class:"src"},"Источник: "+cur.source+". Книга в общественном достоянии.") : null));
 
   // Герои
   const hb=h("div");
@@ -1859,6 +1892,90 @@ async function api(path, body={}){
   const j=await r.json().catch(()=>({}));
   if(!r.ok){ const e=new Error(j.error||("http_"+r.status)); e.code=j.error||"server_error"; throw e; }
   return j;
+}
+// ================= Каталог книг из общественного достояния =================
+const CATALOG_ON = SERVER_ON && CFG.catalogEnabled !== false;
+function svgIcon(markup){ const d=document.createElement("span"); d.innerHTML=markup; return d.firstChild; }
+const CAT_SOURCES = {
+  wikisource: { name:"Викитека", note:"Русская классика. Викитека публикует только тексты, свободные от авторских прав." },
+  gutenberg:  { name:"Project Gutenberg", note:"Книги на английском и русском. Показаны только те, где автор и переводчик умерли до 1956 года, — они свободны от прав и в России, и в Европе." }
+};
+const CAT_ERR = {
+  query_too_short:"Введите хотя бы два символа.",
+  source_unavailable:"Каталог сейчас не отвечает. Попробуйте через минуту.",
+  not_public_domain:"Эту книгу нельзя добавить: она может быть защищена авторским правом.",
+  too_large:"Книга слишком большая для загрузки.",
+  network:"Нет связи с сервером. Проверьте интернет."
+};
+let catState = { source:"wikisource", q:"", lang:"all" };
+function catalogSheet(){
+  track("catalog_opened",{});
+  sheet("Каталог книг",(b,close)=>{
+    const seg=h("div",{class:"seg",role:"group","aria-label":"Источник"});
+    const note=h("p",{class:"hint"});
+    const langRow=h("div",{class:"optrow",role:"group","aria-label":"Язык"});
+    const q=h("input",{type:"search",id:"catq",placeholder:"Название или автор",autocomplete:"off"}); q.value=catState.q;
+    const go=h("button",{class:"btn primary",type:"button"},"Искать");
+    const out=h("div"), more=h("div");
+    let page=1;
+    const drawSeg=()=>{
+      seg.innerHTML="";
+      Object.entries(CAT_SOURCES).forEach(([k,v])=>seg.append(h("button",{type:"button","aria-pressed":String(catState.source===k),onclick:()=>{ catState.source=k; drawSeg(); out.innerHTML=""; more.innerHTML=""; if(q.value.trim().length>=2) search(1); }},v.name)));
+      note.textContent=CAT_SOURCES[catState.source].note;
+      langRow.hidden = catState.source!=="gutenberg";
+      langRow.innerHTML="";
+      [["all","Все языки"],["ru","Русский"],["en","Английский"]].forEach(([k,l])=>langRow.append(h("button",{type:"button","aria-pressed":String(catState.lang===k),onclick:()=>{ catState.lang=k; drawSeg(); if(q.value.trim().length>=2) search(1); }},l)));
+    };
+    const row=(it)=>{
+      const meta=[it.author, it.translator?("перевод: "+it.translator):"", it.lang==="en"?"английский":it.lang==="ru"?"русский":it.lang, it.format].filter(Boolean).join(" · ");
+      const add=h("button",{class:"btn primary",type:"button"},"Добавить");
+      add.addEventListener("click",()=>download(it, add));
+      return h("div",{class:"catrow"}, h("div",{class:"t"},h("b",{},it.title),h("span",{},meta)), add);
+    };
+    const search=async(pg)=>{
+      const text=q.value.trim(); catState.q=text;
+      if(text.length<2){ out.innerHTML=""; out.append(h("p",{class:"msgline"},CAT_ERR.query_too_short)); return; }
+      page=pg; go.disabled=true;
+      if(pg===1){ out.innerHTML=""; }
+      more.innerHTML=""; more.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Ищу…"));
+      try{
+        const r=await api("/api/catalog/search",{source:catState.source, q:text, page:pg, lang:catState.lang});
+        more.innerHTML="";
+        track("catalog_search",{source:catState.source, query_length:text.length, results:r.items.length, hidden:r.hidden, page:pg});
+        r.items.forEach(it=>out.append(row(it)));
+        if(!out.children.length) out.append(h("p",{class:"msgline"}, r.next ? "На этой странице нет подходящих книг." : "Ничего не нашлось. Попробуйте другое название или фамилию автора."));
+        if(r.hidden && catState.source==="gutenberg") more.append(h("p",{class:"src"},`Скрыто книг, которые могут быть под защитой авторского права: ${r.hidden}.`));
+        if(r.next) more.append(h("div",{class:"btns"},h("button",{class:"btn",type:"button",onclick:()=>search(page+1)},"Показать ещё")));
+      }catch(e){ more.innerHTML=""; out.append(h("p",{class:"msgline"},CAT_ERR[e.code]||PW_ERR[e.code]||CAT_ERR.source_unavailable)); }
+      go.disabled=false;
+    };
+    const download=async(it, btnEl)=>{
+      btnEl.disabled=true; btnEl.textContent="Загружаю…";
+      track("catalog_download_started",{source:it.source, lang:it.lang, format:it.format});
+      try{
+        let r;
+        try{ r=await fetch(API+"/api/catalog/file",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({initData:W.initData, source:it.source, id:it.id})}); }
+        catch(_){ const e=new Error("network"); e.code="network"; throw e; }
+        if(!r.ok){ const j=await r.json().catch(()=>({})); const e=new Error(j.error||"source_unavailable"); e.code=j.error||"source_unavailable"; throw e; }
+        const fmt=r.headers.get("X-Book-Format")||it.format||"epub";
+        const blob=await r.blob();
+        const file=new File([blob], (it.title||"book")+"."+fmt, {type: blob.type});
+        btnEl.textContent="Обрабатываю…";
+        const id=await importBook(file, fmt, {title:it.title, author:it.author, translator:it.translator, source:CAT_SOURCES[it.source].name});
+        track("catalog_book_added",{source:it.source, lang:it.lang, format:fmt, size_kb:Math.round(blob.size/1024)});
+        close(); renderLibrary(); openReader(id);
+      }catch(e){
+        track("catalog_download_failed",{source:it.source, error:e.code||String(e.message||"").slice(0,60)});
+        btnEl.disabled=false; btnEl.textContent="Добавить";
+        toast(CAT_ERR[e.code] || PW_ERR[e.code] || ("Не удалось открыть книгу: "+(e.message||"ошибка")));
+      }
+    };
+    go.addEventListener("click",()=>search(1));
+    q.addEventListener("keydown",e=>{ if(e.key==="Enter") search(1); });
+    drawSeg();
+    b.append(seg, note, langRow, h("label",{for:"catq"},"Поиск"), h("div",{class:"srow"},q,go), out, more);
+    if(catState.q.length>=2) search(1);
+  });
 }
 async function refreshBilling(markPaywall){
   if(!BILLING_ON) return null;
