@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ChatBook V1.2</title>
+<title>Книги-переписки</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 /* ============ НАСТРОЙКИ АНАЛИТИКИ ============
@@ -1171,7 +1171,7 @@ const fandomBase = slug => `https://${fandomSlug(slug)}.fandom.com`;
 const WIKI_ERR = "Не удалось связаться с вики-сайтом. Проверьте интернет. В предпросмотре внутри Claude внешние запросы закрыты, в Telegram-версии поиск работает.";
 const FANDOM_ERR = "Такой вики на Fandom не нашлось. Проверьте адрес: он стоит в ссылке вида https://ИМЯ.fandom.com.";
 async function wikiApi(base, params){
-  const u=new URL(base+"/api.php");
+  const u=new URL(base+(base.includes(".wikipedia.org")?"/w/api.php":"/api.php"));
   Object.entries({...params, format:"json", formatversion:"2", origin:"*"}).forEach(([k,v])=>u.searchParams.set(k,v));
   const r=await fetch(u.toString());
   if(r.status===404) { const e=new Error("no_wiki"); e.code="no_wiki"; throw e; }
