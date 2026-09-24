@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Книги-переписки</title>
+<title>ChatBook V1.2</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 /* ============ НАСТРОЙКИ АНАЛИТИКИ ============
@@ -348,6 +348,7 @@ label.addcover,label.iconbtn{cursor:pointer}
       <div class="ltop">
         <h1>Библиотека</h1>
         <button class="iconbtn" id="adminBtn" hidden aria-label="Управление подпиской и промокодами"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></button>
+        <button class="iconbtn" id="feedbackBtn" hidden aria-label="Оставить отзыв"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg></button>
         <button class="iconbtn themeBtn" aria-label="Сменить тему"></button>
         <label class="iconbtn" id="addTop" for="file" role="button" tabindex="0" aria-label="Добавить книгу"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></label>
       </div>
@@ -1160,41 +1161,52 @@ function redrawNote(s,l){
   renderNote(s,l,b);
 }
 
-// ================= Википедия =================
+// ================= Источники справок: Википедия и Fandom =================
+// Обе вики устроены одинаково (движок MediaWiki, api.php с поддержкой origin=*),
+// поэтому поиск статьи и раздела с персонажами написаны один раз и параметризованы базовым адресом.
 const WIKI_LANGS=[["ru","Русская"],["en","Английская"],["uk","Украинская"],["de","Немецкая"],["fr","Французская"],["es","Испанская"],["it","Итальянская"],["el","Греческая"],["la","Латинская"]];
-const wikiBase = lang => `https://${lang}.wikipedia.org`;
-const WIKI_ERR = "Не удалось связаться с Википедией. Проверьте интернет. В предпросмотре внутри Claude внешние запросы закрыты, в Telegram-версии поиск работает.";
-async function wikiApi(lang, params){
-  const u=new URL(wikiBase(lang)+"/w/api.php");
+const wikipediaBase = lang => `https://${lang}.wikipedia.org`;
+const fandomSlug = s => clean(s).toLowerCase().replace(/^https?:\/\/([a-z0-9-]+)\.fandom\.com.*$/,"$1").replace(/[^a-z0-9-]+/g,"-").replace(/^-+|-+$/g,"");
+const fandomBase = slug => `https://${fandomSlug(slug)}.fandom.com`;
+const WIKI_ERR = "Не удалось связаться с вики-сайтом. Проверьте интернет. В предпросмотре внутри Claude внешние запросы закрыты, в Telegram-версии поиск работает.";
+const FANDOM_ERR = "Такой вики на Fandom не нашлось. Проверьте адрес: он стоит в ссылке вида https://ИМЯ.fandom.com.";
+async function wikiApi(base, params){
+  const u=new URL(base+"/api.php");
   Object.entries({...params, format:"json", formatversion:"2", origin:"*"}).forEach(([k,v])=>u.searchParams.set(k,v));
-  const r=await fetch(u.toString()); if(!r.ok) throw new Error("http "+r.status);
+  const r=await fetch(u.toString());
+  if(r.status===404) { const e=new Error("no_wiki"); e.code="no_wiki"; throw e; }
+  if(!r.ok) throw new Error("http "+r.status);
   return r.json();
 }
 const stripTags = s => { const d=document.createElement("div"); d.innerHTML=s||""; return clean(d.textContent); };
-async function wikiSearch(lang,q,limit=8){
-  const j=await wikiApi(lang,{action:"query",list:"search",srsearch:q,srlimit:limit});
+async function wikiSearch(base,q,limit=8){
+  const j=await wikiApi(base,{action:"query",list:"search",srsearch:q,srlimit:limit});
   return ((j.query&&j.query.search)||[]).map(x=>({title:x.title, snippet:stripTags(x.snippet)}));
 }
-async function wikiSummary(lang,title){
-  const r=await fetch(`${wikiBase(lang)}/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g,"_"))}`);
-  if(!r.ok) throw new Error("http "+r.status);
-  const j=await r.json();
-  return {title:j.title, description:j.description||"", extract:j.extract||"", url:(j.content_urls&&j.content_urls.desktop&&j.content_urls.desktop.page)||`${wikiBase(lang)}/wiki/${encodeURIComponent(title)}`};
+// Общий для Википедии и Fandom способ получить вводный абзац: разбор нулевой секции статьи.
+// Не зависит от расширений вроде TextExtracts или RESTBase, которые есть не на каждой вики.
+async function wikiSummary(base,title){
+  const j=await wikiApi(base,{action:"parse",page:title,prop:"text",section:"0",redirects:"1"});
+  const p=j.parse; if(!p) throw new Error("not_found");
+  const doc=new DOMParser().parseFromString(p.text||"","text/html");
+  doc.querySelectorAll(".mw-editsection, sup, style, .reference, .reflist, .navbox, table, .infobox, .portable-infobox").forEach(e=>e.remove());
+  const extract=[...doc.querySelectorAll("p")].map(x=>clean(x.textContent)).filter(t=>t.length>3).slice(0,3).join(" ");
+  return {title:p.title||title, extract, url:`${base}/wiki/${encodeURIComponent((p.title||title).replace(/ /g,"_"))}`};
 }
 const CHAR_SECTION = /персонаж|действующие лица|герои|характеры|characters|cast|dramatis|figuren|personnages|personajes|personaggi/i;
-async function wikiCharacters(lang,title){
-  const s=await wikiApi(lang,{action:"parse",page:title,prop:"sections",redirects:"1"});
+async function wikiCharacters(base,title){
+  const s=await wikiApi(base,{action:"parse",page:title,prop:"sections",redirects:"1"});
   const secs=(s.parse&&s.parse.sections)||[];
   const sec=secs.find(x=>CHAR_SECTION.test(stripTags(x.line)));
   if(!sec) return {title:(s.parse&&s.parse.title)||title, list:[]};
-  const t=await wikiApi(lang,{action:"parse",page:title,prop:"text",section:sec.index,redirects:"1"});
-  return {title:(t.parse&&t.parse.title)||title, list:extractCharacters(t.parse&&t.parse.text||"", lang)};
+  const t=await wikiApi(base,{action:"parse",page:title,prop:"text",section:sec.index,redirects:"1"});
+  return {title:(t.parse&&t.parse.title)||title, list:extractCharacters(t.parse&&t.parse.text||"", base)};
 }
-function extractCharacters(html, lang){
+function extractCharacters(html, base){
   const doc=new DOMParser().parseFromString(html,"text/html");
   doc.querySelectorAll(".mw-editsection, sup, style, .reference, .reflist, .navbox, .mw-empty-elt, table").forEach(e=>e.remove());
   const out=[], seen=new Set();
-  const linkOf = el => { const a=el.querySelector('a[href^="/wiki/"]'); return a ? wikiBase(lang)+a.getAttribute("href") : ""; };
+  const linkOf = el => { const a=el.querySelector('a[href^="/wiki/"]'); return a ? base+a.getAttribute("href") : ""; };
   const add=(name,desc,url)=>{
     name=clean(name).replace(/[\s,:;—–-]+$/,""); desc=clean(desc).replace(/^[\s,:;—–-]+/,"");
     if(!name || name.length<2 || name.length>70 || seen.has(name.toLowerCase())) return;
@@ -1221,11 +1233,35 @@ function extractCharacters(html, lang){
   });
   return out.slice(0,80);
 }
-function langPicker(id){
-  const sel=h("select",{id,"aria-label":"Раздел Википедии"});
+// Выбор источника: Википедия (по языковому разделу) или конкретная вики на Fandom.
+// Возвращает {el, getBase, getLabel, getSource} — el вставляется в форму, остальное читается перед запросом.
+function sourcePicker(idPrefix){
+  const savedSrc = LS.get("heroSrc")==="fandom" ? "fandom" : "wiki";
+  let source=savedSrc;
+  const seg=h("div",{class:"seg",role:"group","aria-label":"Источник"});
+  const wikiBox=h("div"), fandomBox=h("div");
+  const langSel=h("select",{id:idPrefix+"lang","aria-label":"Раздел Википедии"});
   const def = WIKI_LANGS.some(x=>x[0]===cur.lang) ? cur.lang : "ru";
-  WIKI_LANGS.forEach(([k,l])=>{ const o=h("option",{value:k},l+" Википедия"); if(k===def) o.selected=true; sel.append(o); });
-  return sel;
+  WIKI_LANGS.forEach(([k,l])=>{ const o=h("option",{value:k},l+" Википедия"); if(k===def) o.selected=true; langSel.append(o); });
+  wikiBox.append(h("label",{for:idPrefix+"lang"},"Раздел"), langSel);
+  const savedWiki = LS.get("heroFandomWiki")||"";
+  const fandomIn=h("input",{type:"text",id:idPrefix+"fw",placeholder:"harrypotter, marvel, disney…",autocapitalize:"none",autocorrect:"off"});
+  fandomIn.value=savedWiki;
+  const openFinder=h("button",{class:"linkbtn",type:"button",onclick:()=>openLink("https://www.fandom.com/search?scope=internal&query="+encodeURIComponent(cur.title))},"Найти нужную вики на fandom.com");
+  fandomBox.append(h("label",{for:idPrefix+"fw"},"Вики на Fandom (часть адреса до .fandom.com)"), fandomIn,
+    h("p",{class:"src",style:"margin-top:6px"},"Например, для книг о Гарри Поттере это ",h("b",{},"harrypotter"),", адрес ",h("b",{},"harrypotter.fandom.com"),"."), openFinder);
+  fandomBox.hidden = source!=="fandom"; wikiBox.hidden = source==="fandom";
+  [["wiki","Википедия"],["fandom","Fandom"]].forEach(([k,l])=>{
+    const b=h("button",{type:"button","aria-pressed":String(source===k),onclick:()=>{ source=k; LS.set("heroSrc",k); seg.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); wikiBox.hidden=k==="fandom"; fandomBox.hidden=k!=="fandom"; }},l);
+    seg.append(b);
+  });
+  return {
+    el:[h("label",{},"Источник"), seg, wikiBox, fandomBox],
+    getSource:()=>source,
+    getBase:()=>{ if(source==="fandom"){ LS.set("heroFandomWiki",fandomIn.value.trim()); return fandomBase(fandomIn.value); } return wikipediaBase(langSel.value); },
+    getLabel:()=>source==="fandom" ? "Fandom: "+(fandomSlug(fandomIn.value)||"—") : langSel.options[langSel.selectedIndex].text,
+    focusFirst:()=> (source==="fandom" ? fandomIn : langSel).focus()
+  };
 }
 function addHeroes(list, method){
   let added=0;
@@ -1239,27 +1275,29 @@ function addHeroes(list, method){
   toast(added ? `Добавлено героев: ${added}` : "Эти герои уже есть в списке");
 }
 
+function srcErr(picker,e){ return picker.getSource()==="fandom" && e && e.code==="no_wiki" ? FANDOM_ERR : WIKI_ERR; }
 function findHeroesSheet(){
-  sheet("Герои из Википедии",(b,close)=>{
-    const lang=langPicker("wlang");
+  sheet("Найти героев",(b,close)=>{
+    const src=sourcePicker("w");
     const q=h("input",{type:"search",id:"wq","aria-label":"Название произведения"}); q.value=cur.title;
     const out=h("div");
     const go=async()=>{
       out.innerHTML=""; out.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Ищу статьи…"));
       try{
-        const res=await wikiSearch(lang.value, q.value.trim()||cur.title);
-        track("heroes_search",{book_id:cur.id, method:"article", wiki_lang:lang.value, results:res.length});
+        const base=src.getBase();
+        const res=await wikiSearch(base, q.value.trim()||cur.title);
+        track("heroes_search",{book_id:cur.id, method:"article", source:src.getSource(), wiki_lang:src.getLabel(), results:res.length});
         out.innerHTML="";
-        if(!res.length){ out.append(h("p",{class:"msgline"},"Статей не нашлось. Попробуйте другое название или другой раздел Википедии.")); return; }
+        if(!res.length){ out.append(h("p",{class:"msgline"},"Статей не нашлось. Попробуйте другое название"+(src.getSource()==="fandom"?" или проверьте адрес вики.":" или другой раздел Википедии."))); return; }
         out.append(h("p",{class:"msgline"},"Выберите статью о произведении:"));
-        res.forEach(r=>out.append(h("button",{class:"res",type:"button",onclick:()=>pickArticle(r.title)},h("b",{},r.title),h("span",{},r.snippet))));
-      }catch(_){ out.innerHTML=""; out.append(h("p",{class:"msgline"},WIKI_ERR)); track("heroes_search_failed",{book_id:cur.id}); }
+        res.forEach(r=>out.append(h("button",{class:"res",type:"button",onclick:()=>pickArticle(base,r.title)},h("b",{},r.title),h("span",{},r.snippet))));
+      }catch(e){ out.innerHTML=""; out.append(h("p",{class:"msgline"},srcErr(src,e))); track("heroes_search_failed",{book_id:cur.id, source:src.getSource()}); }
     };
-    const pickArticle=async title=>{
+    const pickArticle=async(base,title)=>{
       out.innerHTML=""; out.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Ищу список персонажей в статье «"+title+"»…"));
       try{
-        const r=await wikiCharacters(lang.value,title);
-        track("heroes_article_parsed",{book_id:cur.id, wiki_lang:lang.value, found:r.list.length});
+        const r=await wikiCharacters(base,title);
+        track("heroes_article_parsed",{book_id:cur.id, source:src.getSource(), found:r.list.length});
         out.innerHTML="";
         if(!r.list.length){
           out.append(h("p",{class:"msgline"},`В статье «${r.title}» нет раздела с персонажами. Выберите другую статью или добавьте героев по имени.`),
@@ -1272,56 +1310,57 @@ function findHeroesSheet(){
         boxes.forEach(o=>o.cb.addEventListener("change",upd)); upd();
         out.append(h("p",{class:"msgline"},`Найдено в статье «${r.title}»: ${r.list.length}. Снимите отметки с лишних.`),
           ...boxes.map(({cb,x})=>h("label",{class:"check"},cb,h("div",{},h("b",{},x.name),x.role?h("span",{},x.role):null))),
-          h("p",{class:"src"},"Источник: Википедия, лицензия CC BY-SA."),
+          h("p",{class:"src"},`Источник: ${src.getLabel()}, лицензия CC BY-SA.`),
           h("div",{class:"btns"},
             h("button",{class:"btn",type:"button",onclick:go},"Назад"),
             h("button",{class:"btn primary",type:"button",onclick:()=>{ addHeroes(boxes.filter(o=>o.cb.checked).map(o=>({...o.x,src:"wiki"})),"article"); close(); }},count)));
-      }catch(_){ out.innerHTML=""; out.append(h("p",{class:"msgline"},WIKI_ERR)); track("heroes_search_failed",{book_id:cur.id}); }
+      }catch(e){ out.innerHTML=""; out.append(h("p",{class:"msgline"},srcErr(src,e))); track("heroes_search_failed",{book_id:cur.id, source:src.getSource()}); }
     };
     q.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
-    b.append(h("label",{for:"wlang"},"Раздел"), lang,
+    b.append(...src.el,
       h("label",{for:"wq"},"Произведение"), h("div",{class:"srow"}, q, h("button",{class:"btn primary",type:"button",onclick:go},"Искать")),
       out);
   });
 }
 function heroByNameSheet(){
   sheet("Добавить героя",(b,close)=>{
-    const lang=langPicker("hlang");
+    const src=sourcePicker("h");
     const q=h("input",{type:"search",id:"hq",placeholder:"Например, Печорин"});
     const out=h("div");
     const go=async()=>{
       const name=q.value.trim(); if(!name) return;
       out.innerHTML=""; out.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Ищу…"));
       try{
-        let res=await wikiSearch(lang.value, `${name} ${cur.title}`, 6);
-        if(!res.length) res=await wikiSearch(lang.value, name, 6);
-        track("heroes_search",{book_id:cur.id, method:"name", wiki_lang:lang.value, results:res.length});
+        const base=src.getBase();
+        let res=await wikiSearch(base, `${name} ${cur.title}`, 6);
+        if(!res.length) res=await wikiSearch(base, name, 6);
+        track("heroes_search",{book_id:cur.id, method:"name", source:src.getSource(), wiki_lang:src.getLabel(), results:res.length});
         out.innerHTML="";
         if(!res.length){
-          out.append(h("p",{class:"msgline"},"В Википедии ничего не нашлось. Можно добавить героя без справки."),
+          out.append(h("p",{class:"msgline"},"Ничего не нашлось. Можно добавить героя без справки."),
             h("div",{class:"btns"},h("button",{class:"btn primary",type:"button",onclick:()=>{ addHeroes([{name,role:"",bio:""}],"manual"); close(); }},"Добавить «"+name+"» без справки")));
           return;
         }
-        res.forEach(r=>out.append(h("button",{class:"res",type:"button",onclick:()=>preview(r.title)},h("b",{},r.title),h("span",{},r.snippet))));
-      }catch(_){ out.innerHTML=""; out.append(h("p",{class:"msgline"},WIKI_ERR)); track("heroes_search_failed",{book_id:cur.id}); }
+        res.forEach(r=>out.append(h("button",{class:"res",type:"button",onclick:()=>preview(base,r.title)},h("b",{},r.title),h("span",{},r.snippet))));
+      }catch(e){ out.innerHTML=""; out.append(h("p",{class:"msgline"},srcErr(src,e))); track("heroes_search_failed",{book_id:cur.id, source:src.getSource()}); }
     };
-    const preview=async title=>{
+    const preview=async(base,title)=>{
       out.innerHTML=""; out.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Загружаю справку…"));
       try{
-        const s=await wikiSummary(lang.value,title);
+        const s=await wikiSummary(base,title);
         const nameIn=h("input",{type:"text",id:"hname"}); nameIn.value=q.value.trim()||s.title;
         out.innerHTML="";
         out.append(h("label",{for:"hname"},"Имя в списке героев"), nameIn,
-          h("p",{class:"desc",style:"margin-top:12px"},h("b",{},s.title), s.description?" — "+s.description:""),
-          h("p",{class:"desc",style:"margin-top:6px"},s.extract),
-          h("p",{class:"src"},"Источник: Википедия, лицензия CC BY-SA."),
+          h("p",{class:"desc",style:"margin-top:12px"},h("b",{},s.title)),
+          h("p",{class:"desc",style:"margin-top:6px"},s.extract||"У статьи нет вводного текста."),
+          h("p",{class:"src"},`Источник: ${src.getLabel()}, лицензия CC BY-SA.`),
           h("div",{class:"btns"},
             h("button",{class:"btn",type:"button",onclick:go},"Назад"),
-            h("button",{class:"btn primary",type:"button",onclick:()=>{ addHeroes([{name:nameIn.value.trim()||s.title, role:s.description, bio:s.extract, url:s.url, src:"wiki"}],"name"); close(); }},"Добавить")));
-      }catch(_){ out.innerHTML=""; out.append(h("p",{class:"msgline"},WIKI_ERR)); track("heroes_search_failed",{book_id:cur.id}); }
+            h("button",{class:"btn primary",type:"button",onclick:()=>{ addHeroes([{name:nameIn.value.trim()||s.title, role:"", bio:s.extract, url:s.url, src:"wiki"}],"name"); close(); }},"Добавить")));
+      }catch(e){ out.innerHTML=""; out.append(h("p",{class:"msgline"},srcErr(src,e))); track("heroes_search_failed",{book_id:cur.id, source:src.getSource()}); }
     };
     q.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
-    b.append(h("label",{for:"hlang"},"Раздел"), lang,
+    b.append(...src.el,
       h("label",{for:"hq"},"Имя героя"), h("div",{class:"srow"}, q, h("button",{class:"btn primary",type:"button",onclick:go},"Найти")),
       out);
   });
@@ -1368,9 +1407,9 @@ function buildProfile(keepScroll){
       hb.append(row,bio);
     });
   } else hb.append(h("p",{class:"empty"},"Героев пока нет. Их можно найти в Википедии по статье о произведении или добавить по имени."));
-  hb.append(h("button",{class:"act",type:"button",onclick:findHeroesSheet},"Найти героев в Википедии"),
+  hb.append(h("button",{class:"act",type:"button",onclick:findHeroesSheet},"Найти героев (Википедия, Fandom)"),
     h("button",{class:"act",type:"button",onclick:heroByNameSheet},"Добавить героя по имени"));
-  if(cur.heroes.some(x=>x.src==="wiki")) hb.append(h("p",{class:"src"},"Часть справок взята из Википедии (CC BY-SA)."));
+  if(cur.heroes.some(x=>x.src==="wiki")) hb.append(h("p",{class:"src"},"Часть справок взята из Википедии или Fandom (CC BY-SA)."));
   P.append(secEl(cur.heroes.length?`Герои, ${cur.heroes.length}`:"Герои", hb));
 
   // Оглавление
@@ -1793,7 +1832,8 @@ function gameSetup(){
 // ================= Подписка и пейволл =================
 const API = (CFG.apiBase||"").replace(/\/+$/,"");
 const BILLING_ON = !!API && inTG;
-let bill=null, billErr=null, billCache=null, trial={first:null, limit:0, read:0, over:false};
+const SERVER_ON = BILLING_ON;   // сервер нужен и для оплаты, и для обратной связи; условие для доступности то же
+let bill=null, billErr=null, billCache=null, trial={first:null, firstSteps:0, read:0, endedTracked:false};
 const PW_ERR = {
   invalid_code:"Такого промокода нет или он отключён.", expired:"Срок действия промокода истёк.",
   used_up:"Лимит активаций этого промокода исчерпан.", already_used:"Вы уже активировали этот промокод.",
@@ -1829,12 +1869,19 @@ const saveTrial = () => putJSON("t", trial);
 // Бесплатный объём = заданный % первой начатой книги (в шагах «Дальше»), общий на все книги
 function paywallNeeded(){
   if(!BILLING_ON || entitled()) return false;
-  if(!trial.first){ trial.first=cur.id; trial.limit=Math.max(1,Math.ceil(steps.length*freePct()/100)); trial.read=0; saveTrial(); }
-  if(trial.over || trial.read>=trial.limit){
-    if(!trial.over){ trial.over=true; saveTrial(); track("trial_ended",{book_id:cur.id, free_steps:trial.limit}); }
+  if(!bill && !billCache) return false;          // настройки ещё не загружены: не блокируем чтение
+  if(!trial.first){ trial.first=cur.id; trial.firstSteps=steps.length; trial.read=0; saveTrial(); }
+  if(!trial.firstSteps && cur.id===trial.first){ trial.firstSteps=steps.length; saveTrial(); }
+  if(trial.read>=trialLimit()){
+    if(!trial.endedTracked){ trial.endedTracked=true; saveTrial(); track("trial_ended",{book_id:cur.id, free_steps:trialLimit(), free_pct:freePct()}); }
     return true;
   }
   return false;
+}
+// Лимит пересчитывается из текущей настройки сервера, поэтому изменение процента в админке действует сразу на всех
+function trialLimit(){
+  if(!trial.firstSteps) return Infinity;
+  return Math.max(1, Math.ceil(trial.firstSteps*freePct()/100));
 }
 function countTrialStep(){ if(BILLING_ON && !entitled() && trial.first){ trial.read++; saveTrial(); renderBilling(); } }
 const stars = n => `${n} ⭐`;
@@ -1850,6 +1897,7 @@ function renderBilling(){
   const box=$("billBox"); if(!box) return;
   box.innerHTML="";
   $("adminBtn").hidden = !(bill && bill.is_admin);
+  $("feedbackBtn").hidden = !SERVER_ON;
   if(!BILLING_ON) return;
   if(entitled()){
     const until = bill ? bill.ent_until : billCache.ent_until;
@@ -1858,7 +1906,8 @@ function renderBilling(){
     return;
   }
   if(!trial.first) return;
-  const remain=Math.max(0,trial.limit-trial.read);
+  const lim=trialLimit(); if(!Number.isFinite(lim)) return;
+  const remain=Math.max(0,lim-trial.read);
   box.append(h("div",{class:"billline"},
     h("span",{}, remain ? `Бесплатно осталось ${remain} ${plural(remain,"порция","порции","порций")} чтения.` : "Бесплатный фрагмент прочитан."),
     h("button",{type:"button",onclick:()=>showPaywall("library")}, remain ? "Подписка" : "Продолжить чтение")));
@@ -1867,7 +1916,7 @@ function renderBilling(){
 let pwOpen=false;
 async function showPaywall(source){
   if(pwOpen) return; pwOpen=true;
-  track("paywall_shown",{source, trial_read:trial.read, trial_limit:trial.limit});
+  track("paywall_shown",{source, trial_read:trial.read, trial_limit:trialLimit(), free_pct:freePct()});
   const sh=sheet("Продолжение по подписке",(b)=>{ b.append(h("p",{class:"msgline"},h("span",{class:"spinner"}),"Загружаю условия…")); });
   const origClose=sh.close; sh.close=()=>{ pwOpen=false; origClose(); };
   const st=await refreshBilling(true);
@@ -1933,6 +1982,37 @@ async function pay(plan, btnEl, sh, err){
   }catch(e){ err.textContent=PW_ERR[e.code]||"Не удалось создать платёж. Попробуйте позже."; btnEl.disabled=false; }
 }
 
+// ================= Обратная связь =================
+const FEEDBACK_LABELS = {bug:"Ошибка", idea:"Идея", other:"Другое"};
+$("feedbackBtn").addEventListener("click", feedbackSheet);
+function feedbackSheet(){
+  track("feedback_opened",{view});
+  sheet("Обратная связь",(b,close)=>{
+    let cat="bug";
+    const seg=h("div",{class:"seg",role:"group","aria-label":"Тип отзыва"});
+    Object.entries(FEEDBACK_LABELS).forEach(([k,l])=>seg.append(h("button",{type:"button","aria-pressed":String(cat===k),onclick:e=>{ cat=k; [...seg.children].forEach(x=>x.setAttribute("aria-pressed",String(x===e.currentTarget))); }},l)));
+    const ta=h("textarea",{id:"fbText",placeholder:"Что случилось или что улучшить?"});
+    const err=h("p",{class:"pw-err",role:"alert"});
+    const btn=h("button",{class:"btn primary",type:"button",onclick:async()=>{
+      const text=ta.value.trim(); if(!text){ ta.focus(); return; }
+      btn.disabled=true; err.textContent="";
+      const context=(view==="read"&&cur ? "Чтение: "+cur.title : view==="oly" ? "Путь на Олимп" : "Библиотека");
+      try{
+        await api("/api/feedback",{category:cat, text, context});
+        track("feedback_sent",{category:cat, length:text.length, view});
+        close(); toast("Спасибо! Сообщение отправлено.");
+      }catch(e){
+        err.textContent = e.code==="rate_limited" ? "Слишком много сообщений подряд. Попробуйте завтра." : e.code==="too_long" ? "Слишком длинный текст, сократите его." : PW_ERR.network;
+        btn.disabled=false;
+      }
+    }},"Отправить");
+    b.append(h("label",{},"Тип"), seg,
+      h("label",{for:"fbText"},"Сообщение"), ta, err,
+      h("p",{class:"pw-foot"},"Сообщение уходит напрямую разработчику вместе с вашим Telegram ID, без текста книг и заметок."),
+      h("div",{class:"btns"}, h("button",{class:"btn",type:"button",onclick:close},"Отмена"), btn));
+  });
+}
+
 // ================= Админ-панель =================
 $("adminBtn").addEventListener("click", openAdmin);
 $("admBack").addEventListener("click", showLibrary);
@@ -1946,7 +2026,7 @@ async function loadAdmin(){
   A.innerHTML="";
   const st=d.stats, s=d.settings;
   A.append(h("div",{class:"acard"},h("h3",{},"Сводка"),h("div",{class:"agrid"},
-    ...[[st.users,"пользователей"],[st.active,"с открытым доступом"],[st.paying,"платящих сейчас"],[st.payments30,"оплат за 30 дней"],[stars(st.stars30),"получено за 30 дней"]]
+    ...[[st.users,"пользователей"],[st.active,"с открытым доступом"],[st.paying,"платящих сейчас"],[st.payments30,"оплат за 30 дней"],[stars(st.stars30),"получено за 30 дней"],[st.feedbackUnread,"новых отзывов"]]
       .map(([v,l])=>h("div",{},h("b",{},String(v)),h("span",{},l))))));
 
   // Цены и условия
@@ -2005,6 +2085,20 @@ async function loadAdmin(){
     })},"Возврат"))));
   if(!(d.payments||[]).length) pl.append(h("p",{class:"amsg"},"Платежей пока нет."));
   A.append(h("div",{class:"acard"},h("h3",{},"Последние платежи"),pl));
+
+  // Обратная связь
+  const fb=h("div");
+  (d.feedback||[]).forEach(f=>{
+    fb.append(h("div",{class:"arow"},
+      h("div",{class:"t"+(f.is_read?" off":"")},
+        h("b",{},FEEDBACK_LABELS[f.category]||"Отзыв"),
+        h("span",{},`${dt(f.at)} · ID ${f.user_id}${f.context?" · "+f.context:""}`),
+        h("span",{style:"color:var(--ink);white-space:pre-wrap"},f.text)),
+      h("button",{type:"button",onclick:async()=>{ await adminCall("markFeedbackRead",{id:f.id, read:!f.is_read}); loadAdmin(); }}, f.is_read?"Вернуть в новые":"Прочитано")));
+  });
+  if(!(d.feedback||[]).length) fb.append(h("p",{class:"amsg"},"Отзывов пока нет."));
+  A.append(h("div",{class:"acard"},h("h3",{},"Обратная связь"),
+    h("p",{class:"hint"},"Каждый новый отзыв сразу приходит вам в Telegram от бота. Здесь — история и отметка «прочитано»."), fb));
 }
 
 // ================= Запуск =================
@@ -2015,7 +2109,12 @@ async function loadAdmin(){
   petMin = LS.get("petMin")==="1";
   renderPet();
   const r=await getJSONMany(["lib","theme","u","g","t","bill"]);
-  if(r.t) trial={...trial, ...r.t};
+  if(r.t){
+    trial={...trial, ...r.t};
+    if(!trial.firstSteps && r.t.limit) trial.firstSteps=Math.round(r.t.limit*100/50);
+    if(r.t.over && trial.endedTracked==null) trial.endedTracked=true;
+    delete trial.limit; delete trial.over;
+  }
   if(r.bill) billCache=r.bill;
   refreshBilling(false);
   if(r.g && r.g.god){ G=r.g; G.events=G.events||[]; G.log=G.log||{}; G.defeated=G.defeated||[]; G.moves=G.moves||{d:"",n:0}; settle(); }
