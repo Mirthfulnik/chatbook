@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Книги-переписки</title>
+<title>ChatBook v1.3</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 /* ============ НАСТРОЙКИ АНАЛИТИКИ ============
@@ -24,6 +24,7 @@ window.APP_CONFIG = {
   tgAppName: "",
   idSalt: "kzjflzjdbhldjfbvldfbgzdfvbldfgblzdfvb35283658265",
   progressStepPct: 5,
+  heroSearchEnabled: false,
   debug: false
 };
 </script>
@@ -1406,9 +1407,11 @@ function buildProfile(keepScroll){
         if(!o) track("hero_viewed",{book_id:cur.id, source:x.src||"builtin", has_bio:!!x.bio}); });
       hb.append(row,bio);
     });
-  } else hb.append(h("p",{class:"empty"},"Героев пока нет. Их можно найти в Википедии по статье о произведении или добавить по имени."));
-  hb.append(h("button",{class:"act",type:"button",onclick:findHeroesSheet},"Найти героев (Википедия, Fandom)"),
-    h("button",{class:"act",type:"button",onclick:heroByNameSheet},"Добавить героя по имени"));
+  } else hb.append(h("p",{class:"empty"},"Героев пока нет."+(CFG.heroSearchEnabled!==false?" Их можно найти в Википедии по статье о произведении или добавить по имени.":"")));
+  if(CFG.heroSearchEnabled!==false){
+    hb.append(h("button",{class:"act",type:"button",onclick:findHeroesSheet},"Найти героев (Википедия, Fandom)"),
+      h("button",{class:"act",type:"button",onclick:heroByNameSheet},"Добавить героя по имени"));
+  }
   if(cur.heroes.some(x=>x.src==="wiki")) hb.append(h("p",{class:"src"},"Часть справок взята из Википедии или Fandom (CC BY-SA)."));
   P.append(secEl(cur.heroes.length?`Герои, ${cur.heroes.length}`:"Герои", hb));
 
@@ -1984,6 +1987,7 @@ async function pay(plan, btnEl, sh, err){
 
 // ================= Обратная связь =================
 const FEEDBACK_LABELS = {bug:"Ошибка", idea:"Идея", other:"Другое"};
+const FEEDBACK_ERR = {rate_limited:"Слишком много сообщений подряд. Попробуйте завтра.", too_long:"Слишком длинный текст, сократите его.", empty_text:"Напишите сообщение перед отправкой.", unauthorized:PW_ERR.unauthorized, network:PW_ERR.network};
 $("feedbackBtn").addEventListener("click", feedbackSheet);
 function feedbackSheet(){
   track("feedback_opened",{view});
@@ -2002,7 +2006,7 @@ function feedbackSheet(){
         track("feedback_sent",{category:cat, length:text.length, view});
         close(); toast("Спасибо! Сообщение отправлено.");
       }catch(e){
-        err.textContent = e.code==="rate_limited" ? "Слишком много сообщений подряд. Попробуйте завтра." : e.code==="too_long" ? "Слишком длинный текст, сократите его." : PW_ERR.network;
+        err.textContent = FEEDBACK_ERR[e.code] || `Не удалось отправить (код ${e.code||"unknown"}). Если это повторяется, разработчику стоит проверить, развёрнут ли на сервере раздел обратной связи и таблица feedback в базе.`;
         btn.disabled=false;
       }
     }},"Отправить");
