@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ChatBook v1.5</title>
+<title>ChatBook v1.6</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 /* ============ НАСТРОЙКИ АНАЛИТИКИ ============
@@ -760,6 +760,7 @@ async function readBook(file){
   } else {
     const text = decode(buf);
     if(/^\s*%PDF/.test(text.slice(0,10))) throw new Error("PDF пока не поддерживается");
+    if(/^\s*(<!doctype html|<html|<head)/i.test(text.slice(0,300))) throw new Error("вместо книги пришла веб-страница");
     book = /<FictionBook/i.test(text.slice(0,3000)) ? parseFB2(text) : parseTXT(text);
   }
   book.blocks = stripGutenberg(book.blocks);
@@ -1905,6 +1906,9 @@ const CAT_ERR = {
   source_unavailable:"Каталог сейчас не отвечает. Попробуйте через минуту.",
   not_public_domain:"Эту книгу нельзя добавить: она может быть защищена авторским правом.",
   too_large:"Книга слишком большая для загрузки.",
+  source_blocked:"Источник сейчас не отдаёт файл этой книги. Попробуйте позже или выберите другое издание.",
+  empty_book:"На этой странице Викитеки нет текста книги — попробуйте другой результат поиска.",
+  not_found:"Книга не нашлась в источнике — возможно, страницу переименовали.",
   network:"Нет связи с сервером. Проверьте интернет."
 };
 let catState = { source:"wikisource", q:"", lang:"all" };
