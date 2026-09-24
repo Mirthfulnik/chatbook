@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Политика конфиденциальности</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script>
+/* ============ ЗАПОЛНИТЕ ЭТИ СТРОКИ ============
+   Всё, что здесь указано, автоматически подставится в текст.
+   Пустое значение будет подсвечено на странице жёлтым. */
+const CONFIG = {
+  operator:  "",            // ФИО или название компании, например: "ИП Иванов Иван Иванович"
+  country:   "",            // страна, где вы зарегистрированы: "Грузия"
+  email:     "",            // почта для обращений: "support@example.com"
+  support:   "",            // аккаунт поддержки в Telegram: "@chatbooks_support"
+  bot:       "",            // имя бота: "@chatbooks_bot"
+  ai:        "",            // сервис ИИ для переводов: "Anthropic (Claude)"
+  updated:   "24 сентября 2026 г."
+};
+</script>
+<style>
+:root{
+  --paper:#F6F7F9; --ink:#1C2230; --muted:#5A6373; --rule:#D8DCE3;
+  --accent:#2E6680; --bubble:#FFFFFF; --bubble-me:#DDEBF2; --fill:#FFF1B8;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --paper:#14171C; --ink:#E4E7EC; --muted:#9AA3B1; --rule:#2C323C;
+  --accent:#86B8D2; --bubble:#1F242C; --bubble-me:#223845; --fill:#5A4A10; } }
+:root[data-theme="dark"]{ --paper:#14171C; --ink:#E4E7EC; --muted:#9AA3B1; --rule:#2C323C;
+  --accent:#86B8D2; --bubble:#1F242C; --bubble-me:#223845; --fill:#5A4A10; }
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:17px/1.62 "PT Serif",Georgia,"Times New Roman",serif;-webkit-text-size-adjust:100%}
+main{max-width:40rem;margin:0 auto;padding:2.2rem 1.25rem 4rem}
+nav{font-family:"PT Sans",system-ui,sans-serif;font-size:.95rem;display:flex;gap:1.1rem;flex-wrap:wrap;margin-bottom:2rem}
+nav a{color:var(--muted);text-decoration:none;padding-bottom:2px;border-bottom:2px solid transparent}
+nav a[aria-current]{color:var(--ink);border-color:var(--accent)}
+nav a:hover{color:var(--ink)}
+h1{font-family:"PT Sans",system-ui,sans-serif;font-weight:700;font-size:2.1rem;line-height:1.15;margin:0 0 .35rem;letter-spacing:-.01em}
+.meta{color:var(--muted);font-family:"PT Sans",system-ui,sans-serif;font-size:.95rem;margin:0 0 1.8rem}
+.chat{display:flex;flex-direction:column;gap:.45rem;margin:0 0 2.6rem;padding:1.1rem;border-radius:18px;
+  background:color-mix(in srgb,var(--accent) 7%,var(--paper))}
+.chat .who{font-family:"PT Sans",system-ui,sans-serif;font-weight:700;font-size:.85rem;color:var(--accent);margin:0 0 .1rem .3rem}
+.chat p{margin:0;max-width:88%;background:var(--bubble);padding:.55rem .85rem;border-radius:16px 16px 16px 5px;
+  font-family:"PT Sans",system-ui,sans-serif;font-size:1rem;line-height:1.45;box-shadow:0 1px 0 var(--rule)}
+section{margin:0 0 2rem}
+h2{font-family:"PT Sans",system-ui,sans-serif;font-size:1.2rem;line-height:1.3;margin:0 0 .6rem;display:flex;gap:.6rem}
+h2 .n{color:var(--accent);min-width:1.6rem}
+p,li{margin:0 0 .75rem}
+ul{padding-left:1.25rem;margin:0 0 .75rem}
+li::marker{color:var(--accent)}
+b{font-weight:700}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.fill{background:var(--fill);padding:0 .25em;border-radius:3px;font-style:italic}
+code{font-family:"PT Sans",system-ui,sans-serif;font-weight:700}
+footer{border-top:1px solid var(--rule);padding-top:1.2rem;color:var(--muted);font-size:.95rem}
+@media (max-width:480px){ body{font-size:16px} h1{font-size:1.75rem} }
+</style>
+</head>
+<body>
+<main>
+<nav>
+  <a href="terms.html" >Условия использования</a>
+  <a href="privacy.html" aria-current="page">Конфиденциальность</a>
+</nav>
+<h1>Политика конфиденциальности</h1>
+<p class="meta">Действует с <span data-k="updated"></span></p>
+
+<div class="chat" aria-label="Коротко">
+  <div class="who">Коротко</div>
+  <p>Ваши книги, заметки и прогресс хранятся у вас: на устройстве и в облаке Telegram.</p>
+  <p>На нашем сервере — ваш Telegram ID, оплаты, промокоды, отзывы и обезличенная статистика.</p>
+  <p>Мы не продаём данные и не показываем рекламу.</p>
+  <p>Хотите удалить данные — напишите в поддержку.</p>
+</div>
+
+<section>
+<h2><span class="n">1</span>Кто отвечает за ваши данные</h2>
+<p>За обработку данных в сервисе «Книги-переписки» (бот <a data-k="bot"></a> и его мини-приложение) отвечает <span data-k="operator"></span>, <span data-k="country"></span>. Связаться с нами можно по почте <a data-k="email"></a> или в Telegram: <a data-k="support"></a>.</p>
+</section>
+
+<section>
+<h2><span class="n">2</span>Какие данные мы получаем</h2>
+<ul>
+<li><b>Данные Telegram.</b> Когда вы открываете приложение, Telegram передаёт нам ваш числовой Telegram ID, имя, имя пользователя и язык интерфейса. Номер телефона и ваши переписки мы не получаем.</li>
+<li><b>Оплаты.</b> Сумма в звёздах, дата, вид доступа, статус подписки и идентификатор платежа Telegram. Банковские данные остаются у Telegram и магазинов приложений, к нам они не попадают.</li>
+<li><b>Промокоды.</b> Какой код и когда вы активировали.</li>
+<li><b>Статистика использования.</b> События в приложении: открытие, чтение, показ предложения об оплате, оплата. По ним мы понимаем, что работает, а что нет. Содержание книг и заметок в статистику не попадает.</li>
+<li><b>Отзывы.</b> Текст, который вы сами отправляете через форму обратной связи, вместе с вашим Telegram ID, чтобы мы могли ответить.</li>
+<li><b>Технические данные.</b> Наш хостинг-провайдер, как и любой сервер, видит IP-адрес и сведения о браузере при запросах к серверу и ведёт краткосрочные журналы для защиты от атак.</li>
+</ul>
+</section>
+
+<section>
+<h2><span class="n">3</span>Что остаётся у вас</h2>
+<p>Тексты книг, в том числе загруженные вами файлы, хранятся в памяти приложения на вашем устройстве. Список книг, прогресс чтения, заметки и настройки хранятся в облачном хранилище Telegram, привязанном к вашему аккаунту и этому боту. Мы не копируем эти данные на свой сервер.</p>
+<p>Для отдельных функций приложение само обращается к внешним сервисам со своего устройства: к открытым библиотекам (Project Gutenberg, Викитека, Internet Archive) — чтобы найти и скачать книгу, и к Википедии — чтобы найти справки о героях. Эти сервисы видят ваш IP-адрес и сам запрос, но не ваш Telegram-аккаунт. Для них действуют их собственные политики.</p>
+<p>Когда вы переводите книгу, фрагменты её текста отправляются на обработку сервису искусственного интеллекта <span data-k="ai"></span>. Вместе с текстом ваши личные данные не передаются.</p>
+</section>
+
+<section>
+<h2><span class="n">4</span>Зачем мы используем данные</h2>
+<ul>
+<li>чтобы узнавать вас в приложении и открывать доступ, за который вы заплатили;</li>
+<li>чтобы принимать оплату, проводить возвраты и отвечать на обращения;</li>
+<li>чтобы присылать в боте сообщения о вашем доступе, например напоминание о конце оплаченного периода;</li>
+<li>чтобы находить ошибки и улучшать сервис;</li>
+<li>чтобы предотвращать злоупотребления, например массовую раздачу промокодов.</li>
+</ul>
+<p>Мы используем данные потому, что это нужно для работы сервиса, который вы у нас заказали, и потому, что у нас есть законный интерес поддерживать его работу и безопасность. Рекламных рассылок мы не делаем.</p>
+</section>
+
+<section>
+<h2><span class="n">5</span>Кому передаются данные</h2>
+<p>Мы не продаём и не сдаём ваши данные. Их обрабатывают только сервисы, без которых наш сервис не работает:</p>
+<ul>
+<li><b>Telegram</b> — платформа, на которой работает бот, приём оплаты в звёздах и облачное хранилище;</li>
+<li><b>Cloudflare</b> — сервер и база данных сервиса;</li>
+<li><b>GitHub Pages</b> — размещение страниц приложения;</li>
+<li><b><span data-k="ai"></span></b> — перевод текстов книг (без личных данных).</li>
+</ul>
+<p>Серверы этих компаний могут находиться в разных странах, в том числе за пределами страны, где живёте вы. Мы также можем раскрыть данные, если этого законно потребуют государственные органы.</p>
+</section>
+
+<section>
+<h2><span class="n">6</span>Сколько мы храним данные</h2>
+<ul>
+<li>данные аккаунта и доступа — пока вы пользуетесь сервисом, и ещё 12 месяцев после последнего входа;</li>
+<li>записи об оплатах — столько, сколько требует законодательство о бухгалтерском и налоговом учёте;</li>
+<li>статистику использования — не дольше 12 месяцев;</li>
+<li>отзывы — до решения вопроса и затем не дольше 12 месяцев.</li>
+</ul>
+</section>
+
+<section>
+<h2><span class="n">7</span>Безопасность</h2>
+<p>Каждый запрос из приложения к серверу проверяется по подписи Telegram, поэтому никто не может выдать себя за вас. Соединения защищены шифрованием, а доступ к базе данных есть только у оператора сервиса.</p>
+</section>
+
+<section>
+<h2><span class="n">8</span>Ваши права</h2>
+<p>Вы можете узнать, какие данные о вас у нас есть, попросить исправить их или удалить. Для этого напишите на <a data-k="email"></a> или в <a data-k="support"></a> с того аккаунта Telegram, которым пользуетесь в сервисе. Мы ответим в течение 30 дней.</p>
+<p>Книги и заметки на устройстве вы можете удалить сами в приложении. Если вы удалите чат с ботом, данные на сервере при этом не удаляются, поэтому для полного удаления напишите нам. Записи об оплатах мы храним столько, сколько требует закон, даже после удаления аккаунта.</p>
+<p>Если вы считаете, что мы нарушаем ваши права, вы можете обратиться в орган по защите персональных данных вашей страны.</p>
+</section>
+
+<section>
+<h2><span class="n">9</span>Дети</h2>
+<p>Если вам меньше 18 лет, оформляйте оплату только с разрешения родителей или опекунов. Мы сознательно не собираем больше данных, чем описано выше, ни у кого из пользователей.</p>
+</section>
+
+<section>
+<h2><span class="n">10</span>Изменения политики</h2>
+<p>Если мы изменим эту политику, новая версия появится на этой странице с новой датой. О существенных изменениях мы заранее сообщим в боте.</p>
+</section>
+
+<footer>Также прочитайте <a href="terms.html">условия использования</a>.</footer>
+</main>
+<script>
+const HINT={operator:"[ваше имя или компания]",country:"[страна]",email:"[почта]",support:"[аккаунт поддержки]",bot:"[имя бота]",ai:"[сервис ИИ]",updated:"[дата]"};
+document.querySelectorAll("[data-k]").forEach(el=>{
+  const k=el.dataset.k, v=(CONFIG[k]||"").trim();
+  if(v){ el.textContent=v;
+    if(k==="email" && el.tagName==="A") el.href="mailto:"+v;
+    if((k==="support"||k==="bot") && el.tagName==="A") el.href="https://t.me/"+v.replace(/^@/,"");
+  } else { el.textContent=HINT[k]; el.classList.add("fill"); el.removeAttribute("href"); }
+});
+</script>
+</body>
+</html>
